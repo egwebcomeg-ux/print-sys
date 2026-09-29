@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Support\Abilities;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Abilities::register();
+
+        // Resources are passed straight to React components as props.
+        JsonResource::withoutWrapping();
     }
 
     /**

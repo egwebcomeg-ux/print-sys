@@ -1,7 +1,22 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import {
+    Factory,
+    LayoutGrid,
+    Layers,
+    Scissors,
+    SlidersHorizontal,
+    Truck,
+    UserCog,
+    Users,
+} from 'lucide-react';
+import CuttingDieController from '@/actions/App/Http/Controllers/Catalog/CuttingDieController';
+import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerController';
+import PaperSupplierController from '@/actions/App/Http/Controllers/Catalog/PaperSupplierController';
+import PaperTypeController from '@/actions/App/Http/Controllers/Catalog/PaperTypeController';
+import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
+import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/PricingSettingsController';
+import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -13,31 +28,34 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useCan } from '@/hooks/use-can';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
-
 export function AppSidebar() {
+    const can = useCan();
+
+    const workItems: NavItem[] = [
+        { title: 'الرئيسية', href: dashboard(), icon: LayoutGrid },
+        { title: 'العملاء', href: CustomerController.index(), icon: Users },
+    ];
+
+    const catalogItems: NavItem[] = [
+        { title: 'أنواع الورق والأسعار', href: PaperTypeController.index(), icon: Layers },
+        { title: 'موردين الورق', href: PaperSupplierController.index(), icon: Truck },
+        { title: 'الاسطمبات', href: CuttingDieController.index(), icon: Scissors },
+        { title: 'المطابع', href: PressController.index(), icon: Factory },
+    ];
+
+    const adminItems: NavItem[] = [
+        ...(can('manage-settings')
+            ? [{ title: 'ثوابت التسعير', href: PricingSettingsController.edit(), icon: SlidersHorizontal }]
+            : []),
+        ...(can('manage-users')
+            ? [{ title: 'المستخدمين', href: UserController.index(), icon: UserCog }]
+            : []),
+    ];
+
     return (
         <Sidebar side="right" collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -53,11 +71,12 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain label="الشغل" items={workItems} />
+                <NavMain label="الكتالوج" items={catalogItems} />
+                {adminItems.length > 0 && <NavMain label="الإدارة" items={adminItems} />}
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
