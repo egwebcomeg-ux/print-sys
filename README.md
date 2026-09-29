@@ -1,56 +1,102 @@
 # Pantopack — نظام التسعير والإنتاج
 
-Laravel 13 + Inertia 3 + React 19 (TypeScript, Tailwind 4), MariaDB. Job costing, CRM and production tracking for Pantopack. Odoo 18 is used only to create the final customer invoice.
+نظام داخلي لمصنع Pantopack للطباعة والتغليف: تسعير العلب والشغل الورقي، متابعة الإنتاج، عملاء وفرص، وفاتورة واحدة لكل شغلانة بتتعمل في Odoo 18.
 
-Background and business rules: [AIDocs/Claude-Code-Prompt.md](AIDocs/Claude-Code-Prompt.md) · Build plan: [AIDocs/BUILD-PLAN.md](AIDocs/BUILD-PLAN.md)
+**التقنيات:** Laravel 13 · Inertia 3 · React 19 (TypeScript) · Tailwind 4 · MariaDB · واجهة عربية RTL بوضع غامق.
 
-## Run locally
+- الـ brief الأصلي وقواعد العمل: [AIDocs/Claude-Code-Prompt.md](AIDocs/Claude-Code-Prompt.md)
+- خطة البناء المفصلة: [AIDocs/BUILD-PLAN.md](AIDocs/BUILD-PLAN.md)
+
+---
+
+## قواعد العمل (ما تتغيرش من غير قرار الإدارة)
+
+1. **نسبة الربح بتتكتب يدوي لكل شغلانة** — مفيش هامش ثابت في أي مكان.
+2. **توزيع المطابع قرار بشري** — السيستم بيفلتر ويرتب بس، والموظف هو اللي بيختار.
+3. **سعر الورق من كذا مورد** — الأرخص اقتراح، والموظف يقدر يختار أي مورد.
+4. **Odoo بيتنادى مرة واحدة بس في آخر الشغلانة** بالكمية الفعلية بعد الهالك، وكل محاولة بتتسجل، مع إعادة محاولة وبديل يدوي، وفشل الفاتورة عمره ما بيوقف إنهاء الشغلانة.
+5. **معادلات الـ dieline** في حاسبة العلب تقريبية لحد ما توصل الرسومات المرجعية — ما تتعدلش من غير رسومات.
+
+---
+
+## التشغيل محليًا
 
 ```bash
-composer install && npm install
-cp .env.example .env && php artisan key:generate   # then set DB_* (MariaDB)
-php artisan migrate --seed                          # sample catalogue in local only
-composer run dev                                    # serve + queue:listen + vite
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+# اضبط DB_* على MariaDB (قاعدة print) ثم:
+php artisan migrate --seed        # بيانات تجريبية في local بس
+npm run build                     # أو npm run dev أثناء التطوير
+php artisan queue:work            # لازم للفواتير (Odoo)
 ```
 
-App: http://127.0.0.1:8000 — seeded logins (password `password`, change them on any shared server):
+الرابط المحلي: **http://printsys.test** (nginx من FlyEnv ← `C:\www\print\public`)، أو `php artisan serve` على http://127.0.0.1:8000.
 
-| Role   | Email                      | Can                                                       |
-| ------ | -------------------------- | --------------------------------------------------------- |
-| مدير   | admin@pantopack.local      | everything                                                |
-| مبيعات | sales@pantopack.local      | customers, leads, pricing/quotes, paper prices, invoicing |
-| إنتاج  | production@pantopack.local | stages, press routing, backlog, completion                |
+### حسابات التجربة (الباسورد لكلهم `password` — غيّره على أي سيرفر حقيقي)
 
-Public registration is off; admins add staff from **المستخدمين**.
+| الدور | الإيميل | الصلاحيات |
+|---|---|---|
+| مدير | admin@pantopack.local | كل حاجة |
+| مبيعات | sales@pantopack.local | العملاء، الفرص، التسعير وعروض الأسعار، أسعار الورق، الفواتير |
+| إنتاج | production@pantopack.local | مراحل الإنتاج، توزيع المطابع، الشغل اللي قدام المطبعة، تأكيد الكمية |
 
-## What's in it
+التسجيل العام مقفول — المدير بيضيف الموظفين من **المستخدمين**.
 
-- **Catalogue:** paper types → grammages → several supplier prices each (cheapest = suggestion only), suppliers, dies, presses (inline backlog), pricing constants (**ثوابت التسعير**).
-- **Quoting:** `QuickBoxPricingCalculator` (boxes) and `ManualJobCostingCalculator` (paper jobs) on server data. Margin is always typed per job. Manual jobs are re-priced on the server.
-- **Lifecycle:** draft → quoted → approved → in_production → completed → invoiced. Approval seeds production stages. Presses are always picked by hand (`PressRoutingSelector`). Completion records the produced (post-waste) quantity.
-- **Odoo:** one queued invoice per completed job (`SyncOdooInvoice`) billed on `produced_quantity`. Every attempt is logged in `odoo_invoice_syncs`, with retry/backoff and a manual fallback. It is idempotent (it reuses an Odoo invoice with ref `PP-{id}`). `ODOO_FAKE=true` until a sandbox exists.
-- **CRM:** customers and leads (الفرص). A lead converts into a job and becomes won when the job is approved.
+---
 
-## Checks
+## إيه اللي جوه السيستم
+
+| الجزء | التفاصيل |
+|---|---|
+| **الكتالوج** | أنواع الورق ← الجرامات ← أسعار كذا مورد لكل جرام · الموردين · الاسطمبات · المطابع (مع تعديل الشغل اللي قدامها من الجدول) · ثوابت التسعير |
+| **التسعير** | `QuickBoxPricingCalculator` للعلب و`ManualJobCostingCalculator` للشغل الورقي، على بيانات السيرفر. **السيرفر بيعيد حساب السعر بنفسه** (`app/Services/Pricing/BoxPricer.php` و`CreateManualJob`) ويرفض أي رقم مختلف عن اللي المتصفح عرضه |
+| **دورة الشغلانة** | مسودة ← عرض سعر ← موافقة ← إنتاج ← خلصت ← اتعملت فاتورة. الموافقة بتعمل مراحل الإنتاج. الاختيار من المطابع يدوي (`PressRoutingSelector`). الإنهاء بيسجل الكمية الفعلية بعد الهالك |
+| **Odoo** | فاتورة واحدة لكل شغلانة عبر JSON-RPC (`app/Services/Odoo/*`) في الـ queue مع إعادة محاولة تدريجية، وكل محاولة في `odoo_invoice_syncs`. بتستخدم فاتورة موجودة بنفس المرجع `PP-{id}` بدل ما تكررها. بديل يدوي لتسجيل رقم فاتورة اتعملت بالإيد (بيتحقق من وجودها في Odoo لما يكون متوصّل). `ODOO_FAKE=true` لحد ما يبقى فيه sandbox |
+| **CRM** | العملاء والفرص. الفرصة بتتحول لشغلانة بضغطة، وبتبقى «اتكسبت» لما العميل يوافق |
+| **الصلاحيات** | مكان واحد: `app/Support/Abilities.php` (Gates) — ومشاركة مع الواجهة عبر `useCan()` |
+
+---
+
+## الفحوصات
 
 ```bash
-php artisan test          # feature tests (SQLite in memory)
-npx tsc --noEmit          # types
+php artisan test              # 79 اختبار (SQLite في الذاكرة)
+npx tsc --noEmit              # الأنواع
 npx vp lint && npx vp fmt --check
 vendor/bin/pint --test
 ```
 
-## Still placeholders (need real data)
+اتعمل عليه كمان مراجعة بفريق agents (أمان، QA على المتصفح بالثلاث أدوار، حسابات، تصميم) وكل الملاحظات الحرجة والمتوسطة اتصلحت — تفاصيلها في سجل الـ commits.
 
-- Paper prices, dies, presses and pricing constants are sample values. Replace them from the catalogue pages.
-- Default production stages per box type: `config/pantopack.php`.
-- Dieline formulas and the ~15% interlock saving in `QuickBoxPricingCalculator.tsx` (don't change them without reference dielines).
-- Invoicing lump-sum manual jobs (no piece count) as one line: `OdooInvoiceService::payload()`, still to be confirmed.
+---
 
-## Deploying to cPanel
+## لسه محتاج بيانات/قرارات من المصنع
 
-- Build assets locally (`npm run build`) and upload `public/build`. cPanel usually has no Node.
-- Cron (every minute): `php artisan schedule:run` and `php artisan queue:work --stop-when-empty --max-time=50`. Odoo retries run through the queue.
-- Point the document root at `public/`. Production `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `QUEUE_CONNECTION=database`, real `ODOO_*`, `ODOO_FAKE=false`.
-- After each deploy: `composer install --no-dev -o`, `php artisan migrate --force`, `php artisan optimize`.
-- PHP ≥ 8.3 with `intl`, `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, `bcmath`; MariaDB ≥ 10.6.
+| البند | الحالة الحالية |
+|---|---|
+| أسعار الورق، الاسطمبات، المطابع، ثوابت التسعير | قيم تجريبية — تتعدل من الصفحات |
+| مراحل الإنتاج الافتراضية لكل نوع علبة | قايمة مؤقتة في `config/pantopack.php` |
+| **قاعدة الفوترة:** الكمية الفعلية × سعر القطعة (الحالي)، ولا سعر ثابت بسماحية ±5–10%؟ | مفتوح — `OdooInvoiceService::payload()` |
+| **تعرفات الطباعة/التكسير/السلوفان** على الفرخ الخام (الحالي) ولا الفرخ المقصوص؟ | مفتوح — `BoxPricer` والحاسبة |
+| شغلانة يدوية بمبلغ إجمالي من غير عدد قطع | بتتفوتر سطر واحد بالمبلغ كله — يتأكد |
+| بيانات Odoo sandbox + نسبة الضريبة + الفاتورة تتأكد تلقائي ولا تفضل مسودة | `ODOO_*` في `.env` |
+| معادلات الـ dieline والتوفير في التصميم المتداخل (~15%) | placeholders في `QuickBoxPricingCalculator.tsx` |
+
+---
+
+## النشر على cPanel
+
+1. `npm run build` محليًا وارفع `public/build` (cPanel غالبًا مفيهوش Node).
+2. Document root على `public/`.
+3. `.env` الإنتاج: `APP_ENV=production`، `APP_DEBUG=false`، `QUEUE_CONNECTION=database`، بيانات `ODOO_*` الحقيقية و`ODOO_FAKE=false`.
+4. Cron كل دقيقة:
+   ```
+   * * * * * cd ~/app && php artisan schedule:run >> /dev/null 2>&1
+   * * * * * cd ~/app && php artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
+   ```
+5. بعد كل نشر: `composer install --no-dev -o` ثم `php artisan migrate --force` ثم `php artisan optimize`.
+6. المتطلبات: PHP ≥ 8.3 مع `intl`, `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, `bcmath` · MariaDB ≥ 10.6.
+
+> ملاحظة nginx: الـ Link header بتاع الـ preload محدود بـ 12 أصل (`bootstrap/app.php`) عشان ما يعملش 502 مع buffers الافتراضية.
