@@ -100,7 +100,7 @@ export type LaminationType = 'none' | 'matte' | 'gloss';
 export type ClosureType = DieCutTool['closureType'];
 
 /** The flat/dieline shape family used to compute unfolded dimensions. */
-export type BoxShapeId = 'reverse_tuck_end' | 'straight_tuck_end' | 'auto_lock_bottom' | 'pillow_bag';
+export type BoxShapeId = 'reverse_tuck_end' | 'straight_tuck_end' | 'auto_lock_bottom' | 'pillow_bag' | 'lid_and_base';
 
 export type BoxTypeId = 'medicine' | 'candy' | 'cosmetics' | 'food' | 'general';
 
@@ -144,6 +144,13 @@ export interface BoxQuote {
   flatWidthMm: number;
   flatHeightMm: number;
   interlockEnabled: boolean;
+  /** Row pitch when rows nest (shape-specific), or null if the shape can't interlock. */
+  interlockPitchMm: number | null;
+  /** Pieces per box (2 for lid-and-base), and the sheet/cut the plan chose. */
+  piecesPerBox: number;
+  sheetWidthCm: number;
+  sheetHeightCm: number;
+  cutFraction: DieCutTool['cutFraction'];
   costBreakdown: {
     paperCost: number;
     platesCost: number;
@@ -226,14 +233,23 @@ const BOX_SHAPE_LABELS: Record<BoxShapeId, string> = {
   straight_tuck_end: 'قفل مستقيم (STE)',
   auto_lock_bottom: 'قاع أوتوماتيك',
   pillow_bag: 'كيس / Pillow',
+  lid_and_base: 'قاع وغطاء (قطعتين)',
 };
 
 // ============================================================================
 // Pricing constants — PLACEHOLDERS. Confirm against real factory rates.
 // ============================================================================
 
-const GLUE_FLAP_MM = 15;
+const GLUE_FLAP_MM = 15; // Project 257 (علبة دواء 68×68×130): 14.5 mm
 const BLEED_MM = 2;
+// Reverse tuck end — from Project 257: tuck flap = panel width + lip, rows nest by one tuck flap.
+const TUCK_LIP_MM = 12;
+const INTERLOCK_ROW_GAP_MM = 4;
+// Lid-and-base tray — from dielines B (قاع 211×134) and C (غطاء 216×144), wall 48, board 1 mm.
+const BOARD_THICKNESS_MM = 1;
+const TRAY_RETURN_EXTRA_MM = 4; // inner return flap = wall + 4
+const LID_CLEARANCE_LENGTH_MM = 5; // lid is longer (216 vs 211) than the base by this
+const LID_CLEARANCE_WIDTH_MM = 10; // ...and wider (144 vs 134) by this
 const EXACT_MATCH_THRESHOLD_CM = 0.3; // sum of |ΔL| + |ΔW| + |ΔD|
 // Rates — PLACEHOLDERS, overridable via the `pricingConstants` prop (ثوابت التسعير page).
 const DEFAULT_PRICING: PricingConstants = {
@@ -257,6 +273,8 @@ const RAW_SHEET_OPTIONS = [
   { name: '70×100', widthCm: 70, heightCm: 100 },
   { name: '88×119', widthCm: 88, heightCm: 119 },
 ];
+
+const CUT_FRACTION_LABELS: Record<DieCutTool['cutFraction'], string> = { '1/1': 'كامل', '1/2': 'نص', '1/4': 'ربع', '1/6': 'سدس', '1/8': 'تمن' };
 
 const CUT_FRACTION_DENOMINATOR: Record<DieCutTool['cutFraction'], number> = {
   '1/1': 1,
@@ -284,19 +302,58 @@ interface FlatDims {
   panelWidthsMm: number[];
   /** Optional labels for each panel width, same length/order as panelWidthsMm. */
   panelLabels: string[];
+  /** Row pitch when rows nest (tuck-style shapes); undefined = use the generic ratio. */
+  interlockPitchMm?: number;
+  /** Multi-piece boxes (lid + base): flat dims above are the largest piece. */
+  piecesPerBox?: number;
+  pieces?: { label: string; widthMm: number; heightMm: number }[];
 }
 
+/**
+ * Calibrated on Project 257 (68×68×130 → flat 286.5×290, rows nest at 214 mm pitch):
+ * the tuck flap is the panel WIDTH plus a lip, not a fraction of the depth.
+ */
 function calcReverseTuckEnd(lengthMm: number, widthMm: number, depthMm: number): FlatDims {
-  const tuckFlapMm = Math.max(15, Math.round(depthMm * 0.75));
+  const tuckFlapMm = widthMm + TUCK_LIP_MM;
   const panelWidthsMm = [GLUE_FLAP_MM, widthMm, lengthMm, widthMm, lengthMm];
   const bodyWidthMm = panelWidthsMm.reduce((a, b) => a + b, 0);
+  const flatHeightMm = depthMm + 2 * tuckFlapMm + 2 * BLEED_MM;
   return {
     flatWidthMm: bodyWidthMm + 2 * BLEED_MM,
-    flatHeightMm: depthMm + 2 * tuckFlapMm + 2 * BLEED_MM,
+    flatHeightMm,
     topFlapMm: tuckFlapMm,
     bottomFlapMm: tuckFlapMm,
     panelWidthsMm,
     panelLabels: ['لسان لصق', 'جانب', 'أمام', 'جانب', 'خلف'],
+    // Alternating rows nest the tuck flap of one row beside the dust flaps of the next.
+    interlockPitchMm: flatHeightMm - tuckFlapMm + INTERLOCK_ROW_GAP_MM,
+  };
+}
+
+/**
+ * Two-piece tray box (قاع وغطاء), from dielines B (base 211×134×48 → 307×336)
+ * and C (lid 216×144×48 → 312×346): the long side runs across the flat with a
+ * plain wall each side; the short side gets double walls with an inner return.
+ * Flat = (L + 2·wall) × (W + 2·(2·wall + board + 4)); the lid is +5 L / +10 W.
+ * `depthMm` is the wall height. Returned dims are the lid (the larger piece).
+ */
+function calcLidAndBase(lengthMm: number, widthMm: number, depthMm: number): FlatDims {
+  const endZoneMm = 2 * depthMm + BOARD_THICKNESS_MM + TRAY_RETURN_EXTRA_MM;
+  const piece = (l: number, w: number) => ({ widthMm: l + 2 * depthMm + 2 * BLEED_MM, heightMm: w + 2 * endZoneMm + 2 * BLEED_MM });
+  const base = piece(lengthMm, widthMm);
+  const lid = piece(lengthMm + LID_CLEARANCE_LENGTH_MM, widthMm + LID_CLEARANCE_WIDTH_MM);
+  return {
+    flatWidthMm: lid.widthMm,
+    flatHeightMm: lid.heightMm,
+    topFlapMm: endZoneMm,
+    bottomFlapMm: endZoneMm,
+    panelWidthsMm: [depthMm, lengthMm + LID_CLEARANCE_LENGTH_MM, depthMm],
+    panelLabels: ['جنب', 'غطاء', 'جنب'],
+    piecesPerBox: 2,
+    pieces: [
+      { label: 'قاع', ...base },
+      { label: 'غطاء', ...lid },
+    ],
   };
 }
 
@@ -351,6 +408,7 @@ const BOX_SHAPE_CALCULATORS: Record<BoxShapeId, (lengthMm: number, widthMm: numb
   straight_tuck_end: calcStraightTuckEnd,
   auto_lock_bottom: calcAutoLockBottom,
   pillow_bag: calcPillowBag,
+  lid_and_base: calcLidAndBase,
 };
 
 // ============================================================================
@@ -362,8 +420,8 @@ function round2(n: number): number {
 }
 
 /** Cost of one raw sheet from its area, the grammage (g/m²), and a chosen supplier's price per ton. */
-function paperCostPerSheetEgp(paper: PaperType, grammage: PaperGrammageOption, pricePerTonEgp: number): number {
-  const areaM2 = (paper.standardSheetSize.widthCm / 100) * (paper.standardSheetSize.heightCm / 100);
+function paperCostPerSheetEgp(sheet: { widthCm: number; heightCm: number }, grammage: PaperGrammageOption, pricePerTonEgp: number): number {
+  const areaM2 = (sheet.widthCm / 100) * (sheet.heightCm / 100);
   const sheetWeightKg = (areaM2 * grammage.gsm) / 1000;
   const pricePerKg = pricePerTonEgp / 1000;
   return sheetWeightKg * pricePerKg;
@@ -776,28 +834,56 @@ export default function QuickBoxPricingCalculator({
   // --- Core calculation --------------------------------------------------
   const calc = useMemo(() => {
     const { flatWidthMm, flatHeightMm } = flatDims;
-
-    // The selected paper's own stock size drives both cost and imposition.
-    const rawSheet = selectedPaperType?.standardSheetSize ?? RAW_SHEET_OPTIONS[0];
-    // Without a die, price on a half sheet; a box too big for it falls back to the full sheet.
-    const fraction: DieCutTool['cutFraction'] =
-      isUsingExistingDie && selectedDie
-        ? selectedDie.cutFraction
-        : (() => {
-            const half = getCutSheetDimsMm(rawSheet.widthCm, rawSheet.heightCm, '1/2');
-            return computeUpsGrid(half.widthMm - 2 * SIDE_TRIM_MM, half.heightMm - GRIPPER_ALLOWANCE_MM, flatWidthMm, flatHeightMm).ups > 0 ? '1/2' : '1/1';
-          })();
-    const cutSheet = getCutSheetDimsMm(rawSheet.widthCm, rawSheet.heightCm, fraction);
-    const usableWidthMm = cutSheet.widthMm - 2 * SIDE_TRIM_MM;
-    const usableHeightMm = cutSheet.heightMm - GRIPPER_ALLOWANCE_MM;
-
-    const plainGrid = computeUpsGrid(usableWidthMm, usableHeightMm, flatWidthMm, flatHeightMm);
+    const piecesPerBox = flatDims.piecesPerBox ?? 1;
+    const interlockPitch = flatDims.interlockPitchMm ?? flatHeightMm * INTERLOCK_HEIGHT_SAVING_RATIO;
     const interlockCandidate = interlockEnabled && shapeCapableOfInterlock && !(isUsingExistingDie && selectedDie);
-    const interlockCols = Math.max(0, Math.floor(usableWidthMm / flatWidthMm));
-    const interlockPitch = flatHeightMm * INTERLOCK_HEIGHT_SAVING_RATIO;
-    const interlockRows = usableHeightMm >= flatHeightMm ? Math.floor((usableHeightMm - flatHeightMm) / interlockPitch) + 1 : 0;
-    // Nesting only pays off when it actually yields more ups than the plain grid.
-    const useInterlock = interlockCandidate && interlockCols * interlockRows > plainGrid.ups;
+
+    // Ups on one cut sheet: plain grid vs nested rows (nesting only when it wins).
+    // Multi-piece boxes need whole sets (lid + base) per sheet, so odd ups are rounded down.
+    const evaluateCut = (sheet: { widthCm: number; heightCm: number }, fr: DieCutTool['cutFraction']) => {
+      const cut = getCutSheetDimsMm(sheet.widthCm, sheet.heightCm, fr);
+      const usableW = cut.widthMm - 2 * SIDE_TRIM_MM;
+      const usableH = cut.heightMm - GRIPPER_ALLOWANCE_MM;
+      const grid = computeUpsGrid(usableW, usableH, flatWidthMm, flatHeightMm);
+      const nestCols = Math.max(0, Math.floor(usableW / flatWidthMm));
+      const nestRows = usableH >= flatHeightMm ? Math.floor((usableH - flatHeightMm) / interlockPitch) + 1 : 0;
+      const nested = interlockCandidate && nestCols * nestRows > grid.ups;
+      const rawUps = nested ? nestCols * nestRows : grid.ups;
+      const ups = Math.floor(rawUps / piecesPerBox) * piecesPerBox;
+      return { sheet, fraction: fr, cut, grid, nested, nestCols, nestRows, ups };
+    };
+
+    // Sheet/cut plan: a die fixes both; otherwise pick the cheapest standard sheet + cut
+    // (paper cost for the whole run), preferring fewer, larger cuts on ties.
+    const paperSheet = selectedPaperType?.standardSheetSize ?? RAW_SHEET_OPTIONS[0];
+    const pricePerTon = selectedSupplierPrice?.pricePerTonEgp ?? 0;
+    const spoilage = 1 + pricing.spoilageRate;
+    let plan: ReturnType<typeof evaluateCut>;
+    if (isUsingExistingDie && selectedDie) {
+      plan = evaluateCut(paperSheet, selectedDie.cutFraction);
+    } else {
+      const sheets = [paperSheet, ...RAW_SHEET_OPTIONS.filter((o) => o.widthCm !== paperSheet.widthCm || o.heightCm !== paperSheet.heightCm)];
+      const fractions: DieCutTool['cutFraction'][] = ['1/1', '1/2', '1/4'];
+      const candidates = sheets
+        .flatMap((sh) => fractions.map((fr) => evaluateCut(sh, fr)))
+        .filter((c) => c.ups > 0)
+        .map((c) => {
+          const perRaw = c.ups * CUT_FRACTION_DENOMINATOR[c.fraction];
+          const sheetsNeeded = Math.ceil(((quantity * piecesPerBox) / perRaw) * spoilage);
+          const cost = sheetsNeeded * (selectedGrammage ? paperCostPerSheetEgp(c.sheet, selectedGrammage, pricePerTon) : 0);
+          return { c, cost, sheetsNeeded };
+        })
+        .sort((a, b) => a.cost - b.cost || a.sheetsNeeded - b.sheetsNeeded || CUT_FRACTION_DENOMINATOR[a.c.fraction] - CUT_FRACTION_DENOMINATOR[b.c.fraction]);
+      plan = candidates[0]?.c ?? evaluateCut(paperSheet, '1/2');
+    }
+
+    const rawSheet = plan.sheet;
+    const fraction = plan.fraction;
+    const cutSheet = plan.cut;
+    const plainGrid = plan.grid;
+    const useInterlock = plan.nested;
+    const interlockCols = plan.nestCols;
+    const interlockRows = plan.nestRows;
 
     let cols: number;
     let rows: number;
@@ -827,16 +913,18 @@ export default function QuickBoxPricingCalculator({
       rowPitchMm = grid.unitHeightMm;
     }
 
-    const upsPerCutSheet = isUsingExistingDie && selectedDie ? selectedDie.upsOnCutSheet : Math.max(0, cols * rows);
+    // With a die, trust its real ups count (a lid-and-base die already holds whole sets).
+    const upsPerCutSheet = isUsingExistingDie && selectedDie ? selectedDie.upsOnCutSheet : plan.ups;
     const cutSheetsPerRawSheet = CUT_FRACTION_DENOMINATOR[fraction];
     const cannotFit = upsPerCutSheet === 0;
     const upsPerRawSheet = Math.max(1, upsPerCutSheet * cutSheetsPerRawSheet);
 
-    const rawSheetsNeeded = Math.ceil((quantity / upsPerRawSheet) * (1 + pricing.spoilageRate));
+    // Pieces, not boxes: a lid-and-base box is two flats.
+    const rawSheetsNeeded = Math.ceil(((quantity * piecesPerBox) / upsPerRawSheet) * (1 + pricing.spoilageRate));
 
     const paperCostPerSheet =
       selectedPaperType && selectedGrammage && selectedSupplierPrice
-        ? paperCostPerSheetEgp(selectedPaperType, selectedGrammage, selectedSupplierPrice.pricePerTonEgp)
+        ? paperCostPerSheetEgp(rawSheet, selectedGrammage, selectedSupplierPrice.pricePerTonEgp)
         : 0;
     const paperCost = rawSheetsNeeded * paperCostPerSheet;
     const platesCost = printColors > 0 ? printColors * pricing.plateCostPerColorEgp : 0;
@@ -881,6 +969,13 @@ export default function QuickBoxPricingCalculator({
       rowPitchMm,
       useInterlock,
       cannotFit,
+      piecesPerBox,
+      boxesPerCutSheet: Math.floor(upsPerCutSheet / piecesPerBox),
+      sheetName: `${rawSheet.widthCm}×${rawSheet.heightCm}`,
+      sheetWidthCm: rawSheet.widthCm,
+      sheetHeightCm: rawSheet.heightCm,
+      fraction,
+      interlockPitchMm: shapeCapableOfInterlock ? interlockPitch : null,
     };
   }, [flatDims, quantity, printColors, lamination, isUsingExistingDie, selectedDie, selectedPaperType, selectedGrammage, selectedSupplierPrice, interlockEnabled, shapeCapableOfInterlock, pricing, marginPercent]);
 
@@ -947,6 +1042,11 @@ export default function QuickBoxPricingCalculator({
       flatWidthMm: flatDims.flatWidthMm,
       flatHeightMm: flatDims.flatHeightMm,
       interlockEnabled,
+      interlockPitchMm: calc.interlockPitchMm,
+      piecesPerBox: calc.piecesPerBox,
+      sheetWidthCm: calc.sheetWidthCm,
+      sheetHeightCm: calc.sheetHeightCm,
+      cutFraction: calc.fraction,
       costBreakdown: {
         paperCost: calc.paperCost,
         platesCost: calc.platesCost,
@@ -1522,7 +1622,7 @@ export default function QuickBoxPricingCalculator({
             <div>- سلوفان {lamination === 'none' ? 'بدون' : lamination === 'matte' ? 'مط حراري' : 'لامع'}</div>
             <div>- عدد {quantity.toLocaleString('ar-EG')} علبة</div>
             <div>
-              - مونتاج {calc.upsPerCutSheet} علبة/فرخ{calc.useInterlock ? ' (متداخل)' : ''} — {calc.rawSheetsNeeded.toLocaleString('ar-EG')} فرخ مطلوب
+              - مونتاج {calc.piecesPerBox > 1 ? `${calc.upsPerCutSheet} قطعة (${calc.boxesPerCutSheet} قاع + ${calc.boxesPerCutSheet} غطاء)` : `${calc.upsPerCutSheet} علبة`}/{CUT_FRACTION_LABELS[calc.fraction]} فرخ {calc.sheetName}{calc.useInterlock ? ' (متداخل)' : ''} — {calc.rawSheetsNeeded.toLocaleString('ar-EG')} فرخ مطلوب
             </div>
           </div>
 

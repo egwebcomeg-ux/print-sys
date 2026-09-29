@@ -12,6 +12,7 @@ enum BoxShape: string
     case StraightTuckEnd = 'straight_tuck_end';
     case AutoLockBottom = 'auto_lock_bottom';
     case PillowBag = 'pillow_bag';
+    case LidAndBase = 'lid_and_base';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum BoxShape: string
             self::StraightTuckEnd => 'لسان مستقيم',
             self::AutoLockBottom => 'قاع أوتوماتيك',
             self::PillowBag => 'مخدة',
+            self::LidAndBase => 'قاع وغطاء',
         };
     }
 }

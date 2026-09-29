@@ -4,6 +4,7 @@ namespace App\Http\Requests\Jobs;
 
 use App\Enums\BoxShape;
 use App\Enums\BoxType;
+use App\Enums\CutFraction;
 use App\Enums\Lamination;
 use App\Models\CuttingDie;
 use App\Models\PaperGrammage;
@@ -49,6 +50,11 @@ class StoreBoxJobRequest extends FormRequest
             'dimensions.depthCm' => ['required', 'numeric', 'min:0', 'max:999'],
             'flatWidthMm' => ['required', 'numeric', 'gt:0', 'max:5000'],
             'flatHeightMm' => ['required', 'numeric', 'gt:0', 'max:5000'],
+            'interlockPitchMm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
+            'piecesPerBox' => ['required', 'integer', 'min:1', 'max:4'],
+            'sheetWidthCm' => ['required', 'integer', 'min:10', 'max:300'],
+            'sheetHeightCm' => ['required', 'integer', 'min:10', 'max:300'],
+            'cutFraction' => ['required', Rule::enum(CutFraction::class)],
             'quantity' => ['required', 'integer', 'min:1', 'max:10000000'],
             'paperTypeId' => ['required', 'integer', 'exists:paper_types,id'],
             'grammageId' => ['required', 'integer', 'exists:paper_grammages,id'],
@@ -117,7 +123,8 @@ class StoreBoxJobRequest extends FormRequest
             $this->pricing = app(BoxPricer::class)->price([
                 'flatWidthMm' => $this->float('flatWidthMm'),
                 'flatHeightMm' => $this->float('flatHeightMm'),
-                'shape' => $this->input('shape'),
+                'interlockPitchMm' => $this->filled('interlockPitchMm') ? $this->float('interlockPitchMm') : null,
+                'piecesPerBox' => $this->integer('piecesPerBox'),
                 'quantity' => $this->integer('quantity'),
                 'printColors' => $this->integer('printColors'),
                 'lamination' => $this->input('lamination'),

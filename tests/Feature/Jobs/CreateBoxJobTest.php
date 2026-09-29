@@ -32,6 +32,8 @@ class CreateBoxJobTest extends TestCase
             'dimensions' => ['lengthCm' => 9, 'widthCm' => 5, 'depthCm' => 3],
             'flatWidthMm' => 299,
             'flatHeightMm' => 80,
+            'interlockPitchMm' => 68, // the old 0.85 ratio on an 80 mm flat
+            'piecesPerBox' => 1,
             'quantity' => 3000,
             'printColors' => 2,
             'lamination' => 'matte',
@@ -47,6 +49,9 @@ class CreateBoxJobTest extends TestCase
 
         return array_replace($inputs, [
             'customer_id' => Customer::factory()->create()->id,
+            'sheetWidthCm' => $pricing['sheetWidthCm'] ?? 70,
+            'sheetHeightCm' => $pricing['sheetHeightCm'] ?? 100,
+            'cutFraction' => $pricing['cutFraction'] ?? '1/2',
             'paperTypeName' => 'x',
             'gsm' => $price->grammage->gsm,
             'paperTypeId' => (string) $price->grammage->paper_type_id,
@@ -95,6 +100,27 @@ class CreateBoxJobTest extends TestCase
         $this->assertEquals(1521.80, (float) $job->costLines()->sum('amount_egp'));
         $this->assertSame('medicine', $job->quote_snapshot['boxType']);
         $this->assertArrayNotHasKey('customer_id', $job->quote_snapshot);
+    }
+
+    public function test_lid_and_base_box_prices_two_pieces_per_box_on_the_cheapest_standard_sheet(): void
+    {
+        $price = PaperGrammagePrice::factory()->create(['price_per_ton_egp' => 14000]);
+
+        // Dielines B/C: lid flat 312×346 (+bleed → 316×350), two pieces per box.
+        $this->actingAs(User::factory()->create())
+            ->post(route('jobs.box.store'), $this->quote($price, [
+                'shape' => 'lid_and_base', 'flatWidthMm' => 316, 'flatHeightMm' => 350,
+                'interlockPitchMm' => null, 'piecesPerBox' => 2, 'quantity' => 1000,
+            ]))
+            ->assertRedirect();
+
+        $job = Job::query()->sole();
+        $plan = $job->quote_snapshot['pricing'];
+        $this->assertSame(2, $plan['piecesPerBox']);
+        $this->assertSame(0, $plan['upsPerCutSheet'] % 2, 'whole lid+base sets per sheet');
+        // 2,000 pieces (+3% spoilage) over the chosen sheet's ups.
+        $this->assertSame((int) ceil(2000 / $job->ups_per_raw_sheet * 1.03), $job->raw_sheets_needed);
+        $this->assertContains([$plan['sheetWidthCm'], $plan['sheetHeightCm']], [[70, 100], [88, 119]]);
     }
 
     public function test_existing_die_is_stored_and_its_ups_drive_the_price(): void
@@ -167,12 +193,15 @@ class CreateBoxJobTest extends TestCase
     {
         $price = PaperGrammagePrice::factory()->create();
 
-        // 715×300 mm flat (a 20×15×8 candy box): no fit on a 700×500 half sheet, 2 ups rotated on the full sheet.
+        // 715×300 mm flat (a 20×15×8 candy box): no fit on any half sheet. Full 70×100 takes 2
+        // (rotated), full 88×119 takes 3 — and 3 on the bigger sheet is marginally less paper per box.
         $this->actingAs(User::factory()->create())
-            ->post(route('jobs.box.store'), $this->quote($price, ['flatWidthMm' => 715, 'flatHeightMm' => 300]))
+            ->post(route('jobs.box.store'), $this->quote($price, ['flatWidthMm' => 715, 'flatHeightMm' => 300, 'interlockPitchMm' => null]))
             ->assertRedirect();
 
-        $this->assertSame(2, Job::query()->sole()->ups_per_raw_sheet);
+        $job = Job::query()->sole();
+        $this->assertSame(3, $job->ups_per_raw_sheet);
+        $this->assertSame([88, 119, '1/1'], [$job->quote_snapshot['pricing']['sheetWidthCm'], $job->quote_snapshot['pricing']['sheetHeightCm'], $job->quote_snapshot['pricing']['cutFraction']]);
     }
 
     public function test_box_that_does_not_fit_any_sheet_is_rejected(): void
