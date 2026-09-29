@@ -52,7 +52,9 @@ export function NativeSelect({
 }) {
     return (
         <select className={cn(controlClass, 'h-9 py-1', className)} {...props}>
-            {placeholder !== undefined && <option value="">{placeholder}</option>}
+            {placeholder !== undefined && (
+                <option value="">{placeholder}</option>
+            )}
             {options.map((option) => (
                 <option key={option.value} value={option.value}>
                     {option.label}

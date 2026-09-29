@@ -14,10 +14,11 @@ export function Pagination({ page }: { page: Paginated<unknown> }) {
             </span>
             <div className="flex flex-wrap gap-1">
                 {page.links.map((link, index) => {
-                    // Laravel's labels are "&laquo; Previous" / "Next &raquo;".
+                    // Laravel's labels carry HTML arrows ("&laquo; السابق" / "التالي &raquo;").
                     const label = link.label
-                        .replace('&laquo; Previous', 'السابق')
-                        .replace('Next &raquo;', 'التالي');
+                        .replace('&laquo;', '')
+                        .replace('&raquo;', '')
+                        .trim();
 
                     return link.url ? (
                         <Link

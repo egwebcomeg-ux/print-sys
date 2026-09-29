@@ -15,7 +15,11 @@ type Supplier = {
     prices_count: number;
 };
 
-export default function PaperSuppliersIndex({ suppliers }: { suppliers: Supplier[] }) {
+export default function PaperSuppliersIndex({
+    suppliers,
+}: {
+    suppliers: Supplier[];
+}) {
     const can = useCan();
 
     return (
@@ -45,23 +49,39 @@ export default function PaperSuppliersIndex({ suppliers }: { suppliers: Supplier
                     </tr>
                 </thead>
                 <tbody>
-                    {suppliers.length === 0 && <EmptyRow colSpan={5}>مفيش موردين لسه</EmptyRow>}
+                    {suppliers.length === 0 && (
+                        <EmptyRow colSpan={5}>مفيش موردين لسه</EmptyRow>
+                    )}
                     {suppliers.map((supplier) => (
                         <tr key={supplier.id}>
                             <Td className="font-medium">{supplier.name}</Td>
                             <Td>{supplier.contact_note ?? '—'}</Td>
-                            <Td className="max-w-xs truncate">{supplier.performance_notes ?? '—'}</Td>
+                            <Td className="max-w-xs truncate">
+                                {supplier.performance_notes ?? '—'}
+                            </Td>
                             <Td>{supplier.prices_count}</Td>
                             <Td className="text-left whitespace-nowrap">
                                 {can('manage-catalog') && (
                                     <>
-                                        <Button asChild variant="ghost" size="sm">
-                                            <Link href={PaperSupplierController.edit(supplier.id)}>
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={PaperSupplierController.edit(
+                                                    supplier.id,
+                                                )}
+                                            >
                                                 <Pencil className="size-4" />
                                             </Link>
                                         </Button>
                                         <DeleteButton
-                                            url={PaperSupplierController.destroy(supplier.id).url}
+                                            url={
+                                                PaperSupplierController.destroy(
+                                                    supplier.id,
+                                                ).url
+                                            }
                                             confirmText="مسح المورد هيمسح كل أسعاره. متأكد؟"
                                         />
                                     </>
@@ -76,5 +96,7 @@ export default function PaperSuppliersIndex({ suppliers }: { suppliers: Supplier
 }
 
 PaperSuppliersIndex.layout = {
-    breadcrumbs: [{ title: 'موردين الورق', href: PaperSupplierController.index() }],
+    breadcrumbs: [
+        { title: 'موردين الورق', href: PaperSupplierController.index() },
+    ],
 };

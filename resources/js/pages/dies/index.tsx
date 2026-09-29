@@ -65,34 +65,63 @@ export default function DiesIndex({ dies }: { dies: DieRow[] }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {dies.length === 0 && <EmptyRow colSpan={10}>مفيش اسطمبات لسه</EmptyRow>}
+                    {dies.length === 0 && (
+                        <EmptyRow colSpan={10}>مفيش اسطمبات لسه</EmptyRow>
+                    )}
                     {dies.map((die) => (
                         <tr key={die.id}>
-                            <Td dir="ltr" className="text-right font-mono">{die.code}</Td>
+                            <Td dir="ltr" className="text-right font-mono">
+                                {die.code}
+                            </Td>
                             <Td className="font-medium">{die.name}</Td>
-                            <Td dir="ltr" className="text-right">{die.dimensions}</Td>
+                            <Td dir="ltr" className="text-right">
+                                {die.dimensions}
+                            </Td>
                             <Td>{die.closure}</Td>
                             <Td>{die.ups_on_cut_sheet}</Td>
-                            <Td dir="ltr" className="text-right">{die.cut_fraction}</Td>
+                            <Td dir="ltr" className="text-right">
+                                {die.cut_fraction}
+                            </Td>
                             <Td>{die.rack_location ?? '—'}</Td>
                             <Td>
-                                <Badge className={cn('border-transparent', conditionClass[die.condition])}>
+                                <Badge
+                                    className={cn(
+                                        'border-transparent',
+                                        conditionClass[die.condition],
+                                    )}
+                                >
                                     {die.conditionLabel}
                                 </Badge>
                             </Td>
                             <Td>
                                 {die.jobs_run_count}
-                                {die.estimated_lifespan_jobs ? ` / ${die.estimated_lifespan_jobs}` : ''}
+                                {die.estimated_lifespan_jobs
+                                    ? ` / ${die.estimated_lifespan_jobs}`
+                                    : ''}
                             </Td>
                             <Td className="text-left whitespace-nowrap">
                                 {can('manage-catalog') && (
                                     <>
-                                        <Button asChild variant="ghost" size="sm">
-                                            <Link href={CuttingDieController.edit(die.id)}>
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={CuttingDieController.edit(
+                                                    die.id,
+                                                )}
+                                            >
                                                 <Pencil className="size-4" />
                                             </Link>
                                         </Button>
-                                        <DeleteButton url={CuttingDieController.destroy(die.id).url} />
+                                        <DeleteButton
+                                            url={
+                                                CuttingDieController.destroy(
+                                                    die.id,
+                                                ).url
+                                            }
+                                        />
                                     </>
                                 )}
                             </Td>

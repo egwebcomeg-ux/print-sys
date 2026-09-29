@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Odoo\FakeOdooClient;
+use App\Services\Odoo\OdooClient;
+use App\Services\Odoo\OdooClientInterface;
 use App\Support\Abilities;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -17,7 +20,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // ODOO_FAKE=true (default until a sandbox exists) keeps every call in memory.
+        $this->app->singleton(OdooClientInterface::class, fn () => config('odoo.fake')
+            ? new FakeOdooClient
+            : new OdooClient(
+                (string) config('odoo.url'),
+                (string) config('odoo.db'),
+                (string) config('odoo.username'),
+                (string) config('odoo.api_key'),
+                (int) config('odoo.timeout'),
+            ));
     }
 
     /**

@@ -62,20 +62,34 @@ export default function PressesIndex({
                     </tr>
                 </thead>
                 <tbody>
-                    {presses.length === 0 && <EmptyRow colSpan={8}>مفيش مطابع لسه</EmptyRow>}
+                    {presses.length === 0 && (
+                        <EmptyRow colSpan={8}>مفيش مطابع لسه</EmptyRow>
+                    )}
                     {presses.map((press) => (
                         <tr key={press.id}>
                             <Td className="font-medium">{press.name}</Td>
                             <Td>
-                                <Badge variant={press.is_internal ? 'default' : 'secondary'}>
-                                    {press.is_internal ? 'داخلية' : 'مقاول خارجي'}
+                                <Badge
+                                    variant={
+                                        press.is_internal
+                                            ? 'default'
+                                            : 'secondary'
+                                    }
+                                >
+                                    {press.is_internal
+                                        ? 'داخلية'
+                                        : 'مقاول خارجي'}
                                 </Badge>
                             </Td>
                             <Td>{press.max_colors}</Td>
-                            <Td dir="ltr" className="text-right">{press.supported_cut_fractions.join('، ')}</Td>
+                            <Td dir="ltr" className="text-right">
+                                {press.supported_cut_fractions.join('، ')}
+                            </Td>
                             <Td>
                                 {press.supported_paper_categories?.length
-                                    ? press.supported_paper_categories.map(categoryLabel).join('، ')
+                                    ? press.supported_paper_categories
+                                          .map(categoryLabel)
+                                          .join('، ')
                                     : 'كل الأنواع'}
                             </Td>
                             <Td>
@@ -83,14 +97,25 @@ export default function PressesIndex({
                                     <Input
                                         type="number"
                                         min={0}
-                                        defaultValue={press.current_backlog_days}
+                                        defaultValue={
+                                            press.current_backlog_days
+                                        }
                                         className="h-8 w-20"
                                         onBlur={(e) => {
                                             const days = Number(e.target.value);
-                                            if (days !== press.current_backlog_days && days >= 0) {
+                                            if (
+                                                days !==
+                                                    press.current_backlog_days &&
+                                                days >= 0
+                                            ) {
                                                 router.patch(
-                                                    PressController.updateBacklog(press.id).url,
-                                                    { current_backlog_days: days },
+                                                    PressController.updateBacklog(
+                                                        press.id,
+                                                    ).url,
+                                                    {
+                                                        current_backlog_days:
+                                                            days,
+                                                    },
                                                     { preserveScroll: true },
                                                 );
                                             }
@@ -104,12 +129,26 @@ export default function PressesIndex({
                             <Td className="text-left whitespace-nowrap">
                                 {can('manage-catalog') && (
                                     <>
-                                        <Button asChild variant="ghost" size="sm">
-                                            <Link href={PressController.edit(press.id)}>
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={PressController.edit(
+                                                    press.id,
+                                                )}
+                                            >
                                                 <Pencil className="size-4" />
                                             </Link>
                                         </Button>
-                                        <DeleteButton url={PressController.destroy(press.id).url} />
+                                        <DeleteButton
+                                            url={
+                                                PressController.destroy(
+                                                    press.id,
+                                                ).url
+                                            }
+                                        />
                                     </>
                                 )}
                             </Td>

@@ -61,7 +61,9 @@ export default function PaperTypeForm({
                 }
                 actions={
                     <Button asChild variant="ghost">
-                        <Link href={PaperTypeController.index()}>رجوع للقائمة</Link>
+                        <Link href={PaperTypeController.index()}>
+                            رجوع للقائمة
+                        </Link>
                     </Button>
                 }
             />
@@ -70,8 +72,17 @@ export default function PaperTypeForm({
                 {({ errors, processing }) => (
                     <fieldset disabled={!canEditType} className="space-y-6">
                         <FormGrid>
-                            <Field label="اسم النوع" htmlFor="name" error={errors.name}>
-                                <Input id="name" name="name" defaultValue={paperType?.name} required />
+                            <Field
+                                label="اسم النوع"
+                                htmlFor="name"
+                                error={errors.name}
+                            >
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    defaultValue={paperType?.name}
+                                    required
+                                />
                             </Field>
                             <Field
                                 label="الفئة"
@@ -83,17 +94,46 @@ export default function PaperTypeForm({
                                     id="category"
                                     name="category"
                                     options={categories}
-                                    defaultValue={paperType?.category ?? categories[0]?.value}
+                                    defaultValue={
+                                        paperType?.category ??
+                                        categories[0]?.value
+                                    }
                                 />
                             </Field>
-                            <Field label="عرض الفرخ (سم)" htmlFor="sheet_width_cm" error={errors.sheet_width_cm}>
-                                <Input id="sheet_width_cm" name="sheet_width_cm" type="number" min={10} defaultValue={paperType?.sheet_width_cm ?? 70} />
+                            <Field
+                                label="عرض الفرخ (سم)"
+                                htmlFor="sheet_width_cm"
+                                error={errors.sheet_width_cm}
+                            >
+                                <Input
+                                    id="sheet_width_cm"
+                                    name="sheet_width_cm"
+                                    type="number"
+                                    min={10}
+                                    defaultValue={
+                                        paperType?.sheet_width_cm ?? 70
+                                    }
+                                />
                             </Field>
-                            <Field label="طول الفرخ (سم)" htmlFor="sheet_height_cm" error={errors.sheet_height_cm}>
-                                <Input id="sheet_height_cm" name="sheet_height_cm" type="number" min={10} defaultValue={paperType?.sheet_height_cm ?? 100} />
+                            <Field
+                                label="طول الفرخ (سم)"
+                                htmlFor="sheet_height_cm"
+                                error={errors.sheet_height_cm}
+                            >
+                                <Input
+                                    id="sheet_height_cm"
+                                    name="sheet_height_cm"
+                                    type="number"
+                                    min={10}
+                                    defaultValue={
+                                        paperType?.sheet_height_cm ?? 100
+                                    }
+                                />
                             </Field>
                         </FormGrid>
-                        {canEditType && <Button disabled={processing}>حفظ النوع</Button>}
+                        {canEditType && (
+                            <Button disabled={processing}>حفظ النوع</Button>
+                        )}
                     </fieldset>
                 )}
             </Form>
@@ -101,10 +141,14 @@ export default function PaperTypeForm({
             {paperType && (
                 <div className="space-y-4">
                     <div className="flex flex-wrap items-end justify-between gap-4">
-                        <h2 className="text-lg font-semibold">الجرامات والأسعار</h2>
+                        <h2 className="text-lg font-semibold">
+                            الجرامات والأسعار
+                        </h2>
                         {canEditType && (
                             <Form
-                                {...PaperGrammageController.store.form(paperType.id)}
+                                {...PaperGrammageController.store.form(
+                                    paperType.id,
+                                )}
                                 options={{ preserveScroll: true }}
                                 resetOnSuccess
                                 className="flex items-start gap-2"
@@ -112,10 +156,19 @@ export default function PaperTypeForm({
                                 {({ errors, processing }) => (
                                     <>
                                         <div>
-                                            <Input name="gsm" type="number" min={40} placeholder="جرام جديد، مثال 300" className="w-48" />
+                                            <Input
+                                                name="gsm"
+                                                type="number"
+                                                min={40}
+                                                placeholder="جرام جديد، مثال 300"
+                                                className="w-48"
+                                            />
                                             <InputError message={errors.gsm} />
                                         </div>
-                                        <Button variant="secondary" disabled={processing}>
+                                        <Button
+                                            variant="secondary"
+                                            disabled={processing}
+                                        >
                                             <Plus /> إضافة جرام
                                         </Button>
                                     </>
@@ -125,7 +178,9 @@ export default function PaperTypeForm({
                     </div>
 
                     {paperType.grammages.length === 0 && (
-                        <p className="text-sm text-muted-foreground">ضيف أول جرام للنوع ده.</p>
+                        <p className="text-sm text-muted-foreground">
+                            ضيف أول جرام للنوع ده.
+                        </p>
                     )}
 
                     <div className="grid gap-4 lg:grid-cols-2">
@@ -168,23 +223,42 @@ function GrammageCard({
             </CardHeader>
             <CardContent className="space-y-3 px-4">
                 {grammage.prices.length === 0 && (
-                    <p className="text-sm text-muted-foreground">مفيش أسعار لسه.</p>
+                    <p className="text-sm text-muted-foreground">
+                        مفيش أسعار لسه.
+                    </p>
                 )}
                 <ul className="divide-y divide-border rounded-lg border border-border">
                     {grammage.prices.map((price) => (
-                        <li key={price.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                        <li
+                            key={price.id}
+                            className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                        >
                             <div className="flex items-center gap-2">
                                 <span>{price.supplierName}</span>
-                                {price.id === cheapestId && grammage.prices.length > 1 && (
-                                    <Badge className="bg-emerald-500/15 text-emerald-400">الأرخص</Badge>
-                                )}
+                                {price.id === cheapestId &&
+                                    grammage.prices.length > 1 && (
+                                        <Badge className="bg-emerald-500/15 text-emerald-400">
+                                            الأرخص
+                                        </Badge>
+                                    )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="font-medium">{egp(price.pricePerTonEgp)} / طن</span>
+                                <span className="font-medium">
+                                    {egp(price.pricePerTonEgp)} / طن
+                                </span>
                                 {price.priceAsOf && (
-                                    <span className="text-xs text-muted-foreground">({price.priceAsOf})</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        ({price.priceAsOf})
+                                    </span>
                                 )}
-                                <DeleteButton size="icon" url={PaperGrammagePriceController.destroy(price.id).url} />
+                                <DeleteButton
+                                    size="icon"
+                                    url={
+                                        PaperGrammagePriceController.destroy(
+                                            price.id,
+                                        ).url
+                                    }
+                                />
                             </div>
                         </li>
                     ))}
@@ -200,7 +274,10 @@ function GrammageCard({
                         <>
                             <NativeSelect
                                 name="paper_supplier_id"
-                                options={suppliers.map((s) => ({ value: String(s.id), label: s.name }))}
+                                options={suppliers.map((s) => ({
+                                    value: String(s.id),
+                                    label: s.name,
+                                }))}
                                 placeholder="اختار المورد"
                                 className="w-44"
                                 required
@@ -215,16 +292,27 @@ function GrammageCard({
                                     className="w-36"
                                     required
                                 />
-                                <InputError message={errors.price_per_ton_egp ?? errors.paper_supplier_id} />
+                                <InputError
+                                    message={
+                                        errors.price_per_ton_egp ??
+                                        errors.paper_supplier_id
+                                    }
+                                />
                             </div>
-                            <Button size="sm" variant="secondary" disabled={processing} className="h-9">
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={processing}
+                                className="h-9"
+                            >
                                 حفظ السعر
                             </Button>
                         </>
                     )}
                 </Form>
                 <p className="text-xs text-muted-foreground">
-                    لو المورد ليه سعر بالفعل على الجرام ده، السعر الجديد هيحل محله.
+                    لو المورد ليه سعر بالفعل على الجرام ده، السعر الجديد هيحل
+                    محله.
                 </p>
             </CardContent>
         </Card>

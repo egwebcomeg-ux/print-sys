@@ -9,12 +9,53 @@ use App\Http\Controllers\Catalog\PaperGrammagePriceController;
 use App\Http\Controllers\Catalog\PaperSupplierController;
 use App\Http\Controllers\Catalog\PaperTypeController;
 use App\Http\Controllers\Catalog\PressController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Jobs\BoxJobController;
+use App\Http\Controllers\Jobs\JobCompletionController;
+use App\Http\Controllers\Jobs\JobController;
+use App\Http\Controllers\Jobs\JobPressAssignmentController;
+use App\Http\Controllers\Jobs\JobStageController;
+use App\Http\Controllers\Jobs\JobStatusController;
+use App\Http\Controllers\Jobs\ManualJobController;
+use App\Http\Controllers\Jobs\OdooInvoiceSyncController;
+use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    // --- Jobs --------------------------------------------------------------
+    Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+
+    Route::middleware('can:create-jobs')->group(function () {
+        Route::get('jobs/create/box', [BoxJobController::class, 'create'])->name('jobs.box.create');
+        Route::post('jobs/box', [BoxJobController::class, 'store'])->name('jobs.box.store');
+        Route::get('jobs/create/manual', [ManualJobController::class, 'create'])->name('jobs.manual.create');
+        Route::post('jobs/manual', [ManualJobController::class, 'store'])->name('jobs.manual.store');
+    });
+
+    Route::get('jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
+    // Per-transition role checks live in JobLifecycleService.
+    Route::patch('jobs/{job}/status', [JobStatusController::class, 'update'])->name('jobs.status.update');
+
+    Route::middleware('can:run-production')->group(function () {
+        Route::post('jobs/{job}/complete', [JobCompletionController::class, 'store'])->name('jobs.complete');
+        Route::patch('jobs/{job}/stages/{stage}', [JobStageController::class, 'update'])->name('jobs.stages.update');
+        Route::post('jobs/{job}/press-assignments', [JobPressAssignmentController::class, 'store'])->name('jobs.press-assignments.store');
+    });
+
+    Route::middleware('can:manage-invoicing')->group(function () {
+        Route::post('jobs/{job}/odoo-syncs', [OdooInvoiceSyncController::class, 'store'])->name('jobs.odoo-syncs.store');
+        Route::post('jobs/{job}/odoo-syncs/manual', [OdooInvoiceSyncController::class, 'manual'])->name('jobs.odoo-syncs.manual');
+    });
+
+    // --- Leads (الفرص) -------------------------------------------------------
+    Route::middleware('can:manage-leads')->group(function () {
+        Route::resource('leads', LeadController::class)->except(['show']);
+        Route::post('leads/{lead}/convert', [LeadController::class, 'convert'])->name('leads.convert');
+    });
 
     // --- Customers ---------------------------------------------------------
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');

@@ -76,7 +76,11 @@ export default function CustomersIndex({
                             <Td className="text-left whitespace-nowrap">
                                 {can('manage-customers') && (
                                     <>
-                                        <Button asChild variant="ghost" size="sm">
+                                        <Button
+                                            asChild
+                                            variant="ghost"
+                                            size="sm"
+                                        >
                                             <Link
                                                 href={CustomerController.edit(
                                                     customer.id,

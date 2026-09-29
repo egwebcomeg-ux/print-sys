@@ -22,7 +22,11 @@ type PaperTypeRow = {
     }[];
 };
 
-export default function PaperTypesIndex({ paperTypes }: { paperTypes: PaperTypeRow[] }) {
+export default function PaperTypesIndex({
+    paperTypes,
+}: {
+    paperTypes: PaperTypeRow[];
+}) {
     const can = useCan();
 
     return (
@@ -52,23 +56,38 @@ export default function PaperTypesIndex({ paperTypes }: { paperTypes: PaperTypeR
                     </tr>
                 </thead>
                 <tbody>
-                    {paperTypes.length === 0 && <EmptyRow colSpan={5}>مفيش أنواع ورق لسه</EmptyRow>}
+                    {paperTypes.length === 0 && (
+                        <EmptyRow colSpan={5}>مفيش أنواع ورق لسه</EmptyRow>
+                    )}
                     {paperTypes.map((type) => (
                         <tr key={type.id}>
                             <Td className="font-medium">{type.name}</Td>
                             <Td>{type.categoryLabel}</Td>
-                            <Td dir="ltr" className="text-right">{type.sheetSize}</Td>
+                            <Td dir="ltr" className="text-right">
+                                {type.sheetSize}
+                            </Td>
                             <Td>
                                 <div className="flex flex-wrap gap-1.5">
                                     {type.grammages.length === 0 && (
-                                        <span className="text-muted-foreground">مفيش جرامات</span>
+                                        <span className="text-muted-foreground">
+                                            مفيش جرامات
+                                        </span>
                                     )}
                                     {type.grammages.map((g) => (
-                                        <Badge key={g.id} variant="secondary" className="font-normal">
+                                        <Badge
+                                            key={g.id}
+                                            variant="secondary"
+                                            className="font-normal"
+                                        >
                                             {g.gsm} جم
-                                            {g.cheapest ? ` · ${egp(g.cheapest.pricePerTonEgp)}` : ' · بدون سعر'}
+                                            {g.cheapest
+                                                ? ` · ${egp(g.cheapest.pricePerTonEgp)}`
+                                                : ' · بدون سعر'}
                                             {g.pricesCount > 1 && (
-                                                <span className="text-emerald-400"> ({g.pricesCount} موردين)</span>
+                                                <span className="text-emerald-400">
+                                                    {' '}
+                                                    ({g.pricesCount} موردين)
+                                                </span>
                                             )}
                                         </Badge>
                                     ))}
@@ -77,13 +96,22 @@ export default function PaperTypesIndex({ paperTypes }: { paperTypes: PaperTypeR
                             <Td className="text-left whitespace-nowrap">
                                 {can('manage-paper-prices') && (
                                     <Button asChild variant="ghost" size="sm">
-                                        <Link href={PaperTypeController.edit(type.id)}>
+                                        <Link
+                                            href={PaperTypeController.edit(
+                                                type.id,
+                                            )}
+                                        >
                                             <Pencil className="size-4" /> الأسعار
                                         </Link>
                                     </Button>
                                 )}
                                 {can('manage-catalog') && (
-                                    <DeleteButton url={PaperTypeController.destroy(type.id).url} />
+                                    <DeleteButton
+                                        url={
+                                            PaperTypeController.destroy(type.id)
+                                                .url
+                                        }
+                                    />
                                 )}
                             </Td>
                         </tr>

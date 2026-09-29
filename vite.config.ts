@@ -70,6 +70,10 @@ export default defineConfig({
         ignorePatterns: [
             '.github/**',
             'AIDocs/**',
+            // Moved from AIDocs with minimal edits — keep their original
+            // formatting so they stay easy to diff against the source.
+            'resources/js/components/costing/**',
+            'resources/js/components/routing/**',
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',

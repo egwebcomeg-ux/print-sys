@@ -30,7 +30,10 @@ function CheckboxGroup({
     return (
         <div className="flex flex-wrap gap-3">
             {options.map((option) => (
-                <label key={option.value} className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm">
+                <label
+                    key={option.value}
+                    className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm"
+                >
                     <input
                         type="checkbox"
                         name={`${name}[]`}
@@ -54,34 +57,73 @@ export default function PressForm({
     cutFractions: Option[];
     paperCategories: Option[];
 }) {
-    const action = press ? PressController.update.form(press.id) : PressController.store.form();
+    const action = press
+        ? PressController.update.form(press.id)
+        : PressController.store.form();
 
     return (
         <PageBody>
             <Head title={press ? 'تعديل مطبعة' : 'مطبعة جديدة'} />
-            <PageHeader title={press ? `تعديل: ${press.name}` : 'مطبعة / مقاول جديد'} />
+            <PageHeader
+                title={press ? `تعديل: ${press.name}` : 'مطبعة / مقاول جديد'}
+            />
 
             <Form {...action} className="max-w-3xl space-y-6">
                 {({ errors, processing }) => (
                     <>
                         <FormGrid>
-                            <Field label="الاسم" htmlFor="name" error={errors.name}>
-                                <Input id="name" name="name" defaultValue={press?.name} required />
+                            <Field
+                                label="الاسم"
+                                htmlFor="name"
+                                error={errors.name}
+                            >
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    defaultValue={press?.name}
+                                    required
+                                />
                             </Field>
-                            <Field label="أقصى عدد ألوان" htmlFor="max_colors" error={errors.max_colors}>
-                                <Input id="max_colors" name="max_colors" type="number" min={1} max={12} defaultValue={press?.max_colors ?? 4} required />
+                            <Field
+                                label="أقصى عدد ألوان"
+                                htmlFor="max_colors"
+                                error={errors.max_colors}
+                            >
+                                <Input
+                                    id="max_colors"
+                                    name="max_colors"
+                                    type="number"
+                                    min={1}
+                                    max={12}
+                                    defaultValue={press?.max_colors ?? 4}
+                                    required
+                                />
                             </Field>
-                            <Field label="الشغل اللي قدامها (أيام)" htmlFor="current_backlog_days" error={errors.current_backlog_days}>
+                            <Field
+                                label="الشغل اللي قدامها (أيام)"
+                                htmlFor="current_backlog_days"
+                                error={errors.current_backlog_days}
+                            >
                                 <Input
                                     id="current_backlog_days"
                                     name="current_backlog_days"
                                     type="number"
                                     min={0}
-                                    defaultValue={press?.current_backlog_days ?? 0}
+                                    defaultValue={
+                                        press?.current_backlog_days ?? 0
+                                    }
                                 />
                             </Field>
-                            <Field label="التواصل" htmlFor="contact_note" error={errors.contact_note}>
-                                <Input id="contact_note" name="contact_note" defaultValue={press?.contact_note ?? ''} />
+                            <Field
+                                label="التواصل"
+                                htmlFor="contact_note"
+                                error={errors.contact_note}
+                            >
+                                <Input
+                                    id="contact_note"
+                                    name="contact_note"
+                                    defaultValue={press?.contact_note ?? ''}
+                                />
                             </Field>
                         </FormGrid>
 
@@ -98,30 +140,44 @@ export default function PressForm({
                         </label>
 
                         <div className="grid gap-2">
-                            <span className="text-sm font-medium">مقاسات الفرخ اللي بتشتغل بيها</span>
+                            <span className="text-sm font-medium">
+                                مقاسات الفرخ اللي بتشتغل بيها
+                            </span>
                             <CheckboxGroup
                                 name="supported_cut_fractions"
                                 options={cutFractions}
                                 selected={press?.supported_cut_fractions ?? []}
                             />
-                            <InputError message={errors.supported_cut_fractions} />
+                            <InputError
+                                message={errors.supported_cut_fractions}
+                            />
                         </div>
 
                         <div className="grid gap-2">
-                            <span className="text-sm font-medium">أنواع الورق اللي بتقبلها</span>
-                            <p className="text-xs text-muted-foreground">سيبها كلها فاضية لو بتقبل كل الأنواع</p>
+                            <span className="text-sm font-medium">
+                                أنواع الورق اللي بتقبلها
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                                سيبها كلها فاضية لو بتقبل كل الأنواع
+                            </p>
                             <CheckboxGroup
                                 name="supported_paper_categories"
                                 options={paperCategories}
-                                selected={press?.supported_paper_categories ?? []}
+                                selected={
+                                    press?.supported_paper_categories ?? []
+                                }
                             />
-                            <InputError message={errors.supported_paper_categories} />
+                            <InputError
+                                message={errors.supported_paper_categories}
+                            />
                         </div>
 
                         <div className="flex gap-2">
                             <Button disabled={processing}>حفظ</Button>
                             <Button asChild variant="ghost">
-                                <Link href={PressController.index()}>إلغاء</Link>
+                                <Link href={PressController.index()}>
+                                    إلغاء
+                                </Link>
                             </Button>
                         </div>
                     </>

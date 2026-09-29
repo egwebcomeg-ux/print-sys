@@ -7,7 +7,13 @@ import { PageBody, PageHeader } from '@/components/crud/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-type UserRow = { id: number; name: string; email: string; role: string; roleLabel: string };
+type UserRow = {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    roleLabel: string;
+};
 
 export default function UsersIndex({ users }: { users: UserRow[] }) {
     return (
@@ -37,9 +43,19 @@ export default function UsersIndex({ users }: { users: UserRow[] }) {
                     {users.map((user) => (
                         <tr key={user.id}>
                             <Td className="font-medium">{user.name}</Td>
-                            <Td dir="ltr" className="text-right">{user.email}</Td>
+                            <Td dir="ltr" className="text-right">
+                                {user.email}
+                            </Td>
                             <Td>
-                                <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.roleLabel}</Badge>
+                                <Badge
+                                    variant={
+                                        user.role === 'admin'
+                                            ? 'default'
+                                            : 'secondary'
+                                    }
+                                >
+                                    {user.roleLabel}
+                                </Badge>
                             </Td>
                             <Td className="text-left whitespace-nowrap">
                                 <Button asChild variant="ghost" size="sm">
@@ -47,7 +63,9 @@ export default function UsersIndex({ users }: { users: UserRow[] }) {
                                         <Pencil className="size-4" />
                                     </Link>
                                 </Button>
-                                <DeleteButton url={UserController.destroy(user.id).url} />
+                                <DeleteButton
+                                    url={UserController.destroy(user.id).url}
+                                />
                             </Td>
                         </tr>
                     ))}

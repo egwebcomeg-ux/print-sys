@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    ClipboardList,
     Factory,
     LayoutGrid,
     Layers,
@@ -8,6 +9,7 @@ import {
     Truck,
     UserCog,
     Users,
+    Target,
 } from 'lucide-react';
 import CuttingDieController from '@/actions/App/Http/Controllers/Catalog/CuttingDieController';
 import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerController';
@@ -16,6 +18,8 @@ import PaperTypeController from '@/actions/App/Http/Controllers/Catalog/PaperTyp
 import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
 import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/PricingSettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
+import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
+import LeadController from '@/actions/App/Http/Controllers/LeadController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -37,22 +41,50 @@ export function AppSidebar() {
 
     const workItems: NavItem[] = [
         { title: 'الرئيسية', href: dashboard(), icon: LayoutGrid },
+        { title: 'الشغلانات', href: JobController.index(), icon: ClipboardList },
+        ...(can('manage-leads')
+            ? [{ title: 'الفرص', href: LeadController.index(), icon: Target }]
+            : []),
         { title: 'العملاء', href: CustomerController.index(), icon: Users },
     ];
 
     const catalogItems: NavItem[] = [
-        { title: 'أنواع الورق والأسعار', href: PaperTypeController.index(), icon: Layers },
-        { title: 'موردين الورق', href: PaperSupplierController.index(), icon: Truck },
-        { title: 'الاسطمبات', href: CuttingDieController.index(), icon: Scissors },
+        {
+            title: 'أنواع الورق والأسعار',
+            href: PaperTypeController.index(),
+            icon: Layers,
+        },
+        {
+            title: 'موردين الورق',
+            href: PaperSupplierController.index(),
+            icon: Truck,
+        },
+        {
+            title: 'الاسطمبات',
+            href: CuttingDieController.index(),
+            icon: Scissors,
+        },
         { title: 'المطابع', href: PressController.index(), icon: Factory },
     ];
 
     const adminItems: NavItem[] = [
         ...(can('manage-settings')
-            ? [{ title: 'ثوابت التسعير', href: PricingSettingsController.edit(), icon: SlidersHorizontal }]
+            ? [
+                  {
+                      title: 'ثوابت التسعير',
+                      href: PricingSettingsController.edit(),
+                      icon: SlidersHorizontal,
+                  },
+              ]
             : []),
         ...(can('manage-users')
-            ? [{ title: 'المستخدمين', href: UserController.index(), icon: UserCog }]
+            ? [
+                  {
+                      title: 'المستخدمين',
+                      href: UserController.index(),
+                      icon: UserCog,
+                  },
+              ]
             : []),
     ];
 
@@ -73,7 +105,9 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain label="الشغل" items={workItems} />
                 <NavMain label="الكتالوج" items={catalogItems} />
-                {adminItems.length > 0 && <NavMain label="الإدارة" items={adminItems} />}
+                {adminItems.length > 0 && (
+                    <NavMain label="الإدارة" items={adminItems} />
+                )}
             </SidebarContent>
 
             <SidebarFooter>
