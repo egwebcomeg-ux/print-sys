@@ -1,7 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import BoxJobController from '@/actions/App/Http/Controllers/Jobs/BoxJobController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
+import JobEditController from '@/actions/App/Http/Controllers/Jobs/JobEditController';
 import { Field } from '@/components/crud/field';
 import { PageBody, PageHeader } from '@/components/crud/page-header';
 import QuickBoxPricingCalculator from '@/components/costing/QuickBoxPricingCalculator';
@@ -17,7 +19,6 @@ import type { CustomerOption } from '@/components/jobs/customer-picker';
 import { ValidationSummary } from '@/components/jobs/validation-summary';
 import { Input } from '@/components/ui/input';
 import { asPayload } from '@/lib/payload';
-import { toast } from 'sonner';
 
 export default function CreateBoxJob({
     dies,
@@ -27,6 +28,8 @@ export default function CreateBoxJob({
     pricingConstants,
     defaultMarginPercent,
     preselect,
+    editing = null,
+    initial = null,
 }: {
     dies: DieCutTool[];
     papers: PaperType[];
@@ -35,11 +38,18 @@ export default function CreateBoxJob({
     pricingConstants: PricingConstants;
     defaultMarginPercent: number;
     preselect: { customerId: number | null; leadId: number | null };
+    /** Set when re-pricing an existing job (jobs/{job}/edit). */
+    editing?: { id: number; name: string } | null;
+    initial?: {
+        title: string | null;
+        job: SavedJobSpec;
+        marginPercent: number;
+    } | null;
 }) {
     const [customerId, setCustomerId] = useState<number | null>(
         preselect.customerId,
     );
-    const [title, setTitle] = useState('');
+    const [title, setTitle] = useState(initial?.title ?? '');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const confirm = (quote: BoxQuote) => {
@@ -50,8 +60,15 @@ export default function CreateBoxJob({
             return;
         }
 
-        router.post(
-            BoxJobController.store.url(),
+        const visit = editing
+            ? {
+                  method: 'put' as const,
+                  url: JobEditController.updateBox.url(editing.id),
+              }
+            : { method: 'post' as const, url: BoxJobController.store.url() };
+
+        router[visit.method](
+            visit.url,
             // matchedDie (full object) is dropped: the server only needs dieId.
             asPayload({
                 ...quote,
@@ -74,10 +91,20 @@ export default function CreateBoxJob({
 
     return (
         <PageBody>
-            <Head title="تسعير علبة" />
+            <Head
+                title={editing ? `إعادة تسعير #${editing.id}` : 'تسعير علبة'}
+            />
             <PageHeader
-                title="تسعير علبة جديدة"
-                description="اختار العميل، سعّر العلبة، واكتب نسبة الربح — لما تأكد الطلب بيتسجل كشغلانة (مسودة)."
+                title={
+                    editing
+                        ? `إعادة تسعير #${editing.id} — ${editing.name}`
+                        : 'تسعير علبة جديدة'
+                }
+                description={
+                    editing
+                        ? 'الأسعار الحالية من الكتالوج. لما تأكد، الشغلانة بتتحدث وترجع مسودة عشان يتبعت عرض سعر جديد.'
+                        : 'اختار العميل، سعّر العلبة، واكتب نسبة الربح — لما تأكد الطلب بيتسجل كشغلانة (مسودة).'
+                }
             />
 
             <ValidationSummary errors={errors} />
@@ -108,6 +135,8 @@ export default function CreateBoxJob({
                 pastJobs={pastJobs}
                 pricingConstants={pricingConstants}
                 defaultMarginPercent={defaultMarginPercent}
+                initialJob={initial?.job ?? null}
+                initialMarginPercent={initial?.marginPercent ?? null}
                 onConfirmOrder={confirm}
             />
         </PageBody>

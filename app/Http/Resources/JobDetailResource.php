@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\JobStatus;
 use App\Enums\JobType;
+use App\Http\Controllers\Jobs\JobEditController;
 use App\Models\Job;
 use App\Models\JobCostLine;
 use App\Models\JobPaperItem;
@@ -42,6 +43,7 @@ class JobDetailResource extends JsonResource
                 'allowed' => (bool) $request->user()?->can(JobLifecycleService::abilityFor($next)),
             ] : null,
             'customer' => $this->customer->only(['id', 'name', 'phone', 'email']),
+            'editable' => JobEditController::editable($this->resource) && (bool) $request->user()?->can('create-jobs'),
             'createdAt' => $this->created_at?->toIso8601String(),
 
             'box' => $this->job_type === JobType::Box ? [

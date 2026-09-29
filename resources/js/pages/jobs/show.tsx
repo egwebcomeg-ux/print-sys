@@ -1,4 +1,4 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -6,6 +6,7 @@ import {
     CircleDashed,
     FileText,
     Loader2,
+    Pencil,
     RefreshCw,
 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
@@ -13,6 +14,7 @@ import type { ReactNode } from 'react';
 import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
 import JobCompletionController from '@/actions/App/Http/Controllers/Jobs/JobCompletionController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
+import JobEditController from '@/actions/App/Http/Controllers/Jobs/JobEditController';
 import JobPressAssignmentController from '@/actions/App/Http/Controllers/Jobs/JobPressAssignmentController';
 import JobQuoteController from '@/actions/App/Http/Controllers/Jobs/JobQuoteController';
 import JobStageController from '@/actions/App/Http/Controllers/Jobs/JobStageController';
@@ -54,6 +56,7 @@ type JobDetail = {
     statusLabel: string;
     statuses: Option[];
     next: { value: JobStatus; label: string; allowed: boolean } | null;
+    editable: boolean;
     customer: {
         id: number;
         name: string;
@@ -141,6 +144,13 @@ export default function JobShow({
                 description={`${job.customer.name} · ${job.typeLabel} · اتسجلت ${date(job.createdAt)}`}
                 actions={
                     <>
+                        {job.editable && (
+                            <Button asChild variant="secondary">
+                                <Link href={JobEditController.edit(job.id)}>
+                                    <Pencil /> تعديل / إعادة تسعير
+                                </Link>
+                            </Button>
+                        )}
                         <Button asChild variant="secondary">
                             <a
                                 href={JobQuoteController.show.url(job.id)}

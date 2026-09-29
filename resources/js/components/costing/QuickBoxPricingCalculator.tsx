@@ -28,7 +28,7 @@
  * ---------------------------------------------------------------------------
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box as BoxIcon,
   Check,
@@ -203,6 +203,9 @@ interface QuickBoxPricingCalculatorProps {
   pricingConstants?: Partial<PricingConstants>;
   /** Starting value of the manual margin field — staff type the real margin per job. */
   defaultMarginPercent?: number;
+  /** Editing an existing job: preload its spec (and margin) instead of the defaults. */
+  initialJob?: SavedJobSpec | null;
+  initialMarginPercent?: number | null;
   /** Called when the user confirms the order, with the full computed quote. Wire this to create a Job Ticket / Sales Order. */
   onConfirmOrder?: (quote: BoxQuote) => void;
   className?: string;
@@ -613,6 +616,8 @@ export default function QuickBoxPricingCalculator({
   pastJobs,
   pricingConstants,
   defaultMarginPercent = 20,
+  initialJob = null,
+  initialMarginPercent = null,
   onConfirmOrder,
   className = '',
 }: QuickBoxPricingCalculatorProps) {
@@ -694,6 +699,15 @@ export default function QuickBoxPricingCalculator({
     setIsUsingExistingDie(job.isUsingExistingDie);
     setSelectedDieId(job.selectedDieId);
     setShowPastJobs(false);
+  }, []);
+
+  // Editing: load the saved job once, exactly like "كرر نفس الشغلانة", plus its margin.
+  useEffect(() => {
+    if (initialJob) {
+      handleRepeatJob(initialJob);
+      if (initialMarginPercent !== null) setMarginPercent(initialMarginPercent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   // --- Box-type preset selection -------------------------------------------

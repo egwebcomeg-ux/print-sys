@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Jobs;
 
+use App\Http\Controllers\Jobs\JobEditController;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -15,7 +16,10 @@ class StoreManualJobRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create-jobs');
+        // On the update route, the job must still be editable (draft/quoted).
+        $job = $this->route('job');
+
+        return $this->user()->can('create-jobs') && ($job === null || JobEditController::editable($job));
     }
 
     /** @return array<string, mixed> */

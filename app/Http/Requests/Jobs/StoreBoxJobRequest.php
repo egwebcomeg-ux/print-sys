@@ -6,6 +6,7 @@ use App\Enums\BoxShape;
 use App\Enums\BoxType;
 use App\Enums\CutFraction;
 use App\Enums\Lamination;
+use App\Http\Controllers\Jobs\JobEditController;
 use App\Models\CuttingDie;
 use App\Models\PaperGrammage;
 use App\Models\PaperGrammagePrice;
@@ -33,7 +34,10 @@ class StoreBoxJobRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create-jobs');
+        // On the update route, the job must still be editable (draft/quoted).
+        $job = $this->route('job');
+
+        return $this->user()->can('create-jobs') && ($job === null || JobEditController::editable($job));
     }
 
     /** @return array<string, mixed> */

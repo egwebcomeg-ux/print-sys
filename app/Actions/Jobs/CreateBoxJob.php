@@ -39,12 +39,14 @@ class CreateBoxJob
      * @param  array<string, mixed>  $quote  validated StoreBoxJobRequest data
      * @param  array<string, mixed>  $pricing  StoreBoxJobRequest::pricing()
      */
-    public function handle(array $quote, array $pricing): Job
+    public function handle(array $quote, array $pricing, ?Job $existing = null): Job
     {
-        return DB::transaction(function () use ($quote, $pricing) {
+        return DB::transaction(function () use ($quote, $pricing, $existing) {
             $usingDie = (bool) $quote['isUsingExistingDie'];
 
-            $job = Job::query()->create([
+            // Editing replaces the whole quote; the job goes back to draft since the price changed.
+            $job = $existing ?? new Job;
+            $job->fill([
                 'customer_id' => $quote['customer_id'],
                 'job_type' => JobType::Box,
                 'title' => $quote['title'] ?? null,
@@ -69,6 +71,8 @@ class CreateBoxJob
                 'quote_snapshot' => Arr::only($quote, self::SNAPSHOT_KEYS) + ['pricing' => $pricing],
                 'status' => JobStatus::Draft,
             ]);
+            $job->save();
+            $job->costLines()->delete();
 
             foreach (self::COST_LABELS as $key => $label) {
                 $amount = $pricing['costBreakdown'][$key];

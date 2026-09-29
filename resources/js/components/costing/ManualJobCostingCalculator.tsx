@@ -91,6 +91,8 @@ interface ManualJobCostingCalculatorProps {
   papers: PaperType[];
   /** Starting value of the manual margin field — staff type the real margin per job. */
   defaultMarginPercent?: number;
+  /** Editing an existing job: its saved line items, cost lines, margin and quantity. */
+  initial?: Pick<ManualJobQuote, 'lineItems' | 'costLines' | 'marginPercent' | 'producedQuantity'> | null;
   onConfirmOrder?: (quote: ManualJobQuote) => void;
   className?: string;
 }
@@ -157,16 +159,19 @@ function makeLineItem(paperCatalog: PaperType[], label: string): ManualLineItem 
 export default function ManualJobCostingCalculator({
   papers,
   defaultMarginPercent = 20,
+  initial = null,
   onConfirmOrder,
   className = '',
 }: ManualJobCostingCalculatorProps) {
   const [paperCatalog] = useState<PaperType[]>(papers);
-  const [lineItems, setLineItems] = useState<ManualLineItem[]>([makeLineItem(papers, 'بند 1')]);
-  const [costLines, setCostLines] = useState<ManualCostLine[]>([
-    { id: nextLocalId('cost'), label: 'طباعة', amountEgp: 0 },
-  ]);
-  const [marginPercent, setMarginPercent] = useState(defaultMarginPercent);
-  const [producedQuantity, setProducedQuantity] = useState<number | ''>('');
+  const [lineItems, setLineItems] = useState<ManualLineItem[]>(() =>
+    initial?.lineItems.length ? initial.lineItems.map((li) => ({ ...li, id: nextLocalId('line') })) : [makeLineItem(papers, 'بند 1')]
+  );
+  const [costLines, setCostLines] = useState<ManualCostLine[]>(() =>
+    initial ? initial.costLines.map((cl) => ({ ...cl, id: nextLocalId('cost') })) : [{ id: nextLocalId('cost'), label: 'طباعة', amountEgp: 0 }]
+  );
+  const [marginPercent, setMarginPercent] = useState(initial?.marginPercent ?? defaultMarginPercent);
+  const [producedQuantity, setProducedQuantity] = useState<number | ''>(initial?.producedQuantity ?? '');
   const [copied, setCopied] = useState(false);
 
   // --- Line item actions ---------------------------------------------------

@@ -23,7 +23,7 @@ class CreateManualJob
     public function __construct(private readonly LinkLeadToJob $linkLead) {}
 
     /** @param array<string, mixed> $quote validated StoreManualJobRequest data */
-    public function handle(array $quote): Job
+    public function handle(array $quote, ?Job $existing = null): Job
     {
         $items = $this->priceLineItems($quote['lineItems']);
 
@@ -49,8 +49,9 @@ class CreateManualJob
             ]);
         }
 
-        return DB::transaction(function () use ($quote, $items, $costLines, $paperCost, $baseCost, $margin, $finalPrice) {
-            $job = Job::query()->create([
+        return DB::transaction(function () use ($quote, $items, $costLines, $paperCost, $baseCost, $margin, $finalPrice, $existing) {
+            $job = $existing ?? new Job;
+            $job->fill([
                 'customer_id' => $quote['customer_id'],
                 'job_type' => JobType::Manual,
                 'title' => $quote['title'],
@@ -63,6 +64,9 @@ class CreateManualJob
                 'quote_snapshot' => Arr::only($quote, ['lineItems', 'costLines', 'marginPercent', 'producedQuantity']),
                 'status' => JobStatus::Draft,
             ]);
+            $job->save();
+            $job->paperItems()->delete();
+            $job->costLines()->delete();
 
             $job->paperItems()->createMany($items->map(fn ($item) => Arr::except($item, 'raw_cost'))->all());
 

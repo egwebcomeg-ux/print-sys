@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Jobs\BoxJobController;
 use App\Http\Controllers\Jobs\JobCompletionController;
 use App\Http\Controllers\Jobs\JobController;
+use App\Http\Controllers\Jobs\JobEditController;
 use App\Http\Controllers\Jobs\JobPressAssignmentController;
 use App\Http\Controllers\Jobs\JobQuoteController;
 use App\Http\Controllers\Jobs\JobStageController;
@@ -36,6 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('jobs/box', [BoxJobController::class, 'store'])->name('jobs.box.store');
         Route::get('jobs/create/manual', [ManualJobController::class, 'create'])->name('jobs.manual.create');
         Route::post('jobs/manual', [ManualJobController::class, 'store'])->name('jobs.manual.store');
+        Route::get('jobs/{job}/edit', [JobEditController::class, 'edit'])->name('jobs.edit');
+        Route::put('jobs/{job}/box', [JobEditController::class, 'updateBox'])->name('jobs.box.update');
+        Route::put('jobs/{job}/manual', [JobEditController::class, 'updateManual'])->name('jobs.manual.update');
     });
 
     Route::get('jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
