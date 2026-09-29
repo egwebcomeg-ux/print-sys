@@ -29,7 +29,7 @@ php artisan key:generate
 # اضبط DB_* على MariaDB (قاعدة print) ثم:
 php artisan migrate --seed        # بيانات تجريبية في local بس
 npm run build                     # أو npm run dev أثناء التطوير
-php artisan queue:work            # لازم للفواتير (Odoo)
+# محليًا QUEUE_CONNECTION=sync فالفواتير بتتعمل فورًا؛ في الإنتاج database مع cron (شوف النشر)
 ```
 
 الرابط المحلي: **http://printsys.test** (nginx من FlyEnv ← `C:\www\print\public`)، أو `php artisan serve` على http://127.0.0.1:8000.
