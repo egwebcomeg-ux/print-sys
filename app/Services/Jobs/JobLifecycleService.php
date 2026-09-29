@@ -57,6 +57,11 @@ class JobLifecycleService
             if ($to === JobStatus::Approved) {
                 JobStageTemplate::seedFor($job);
 
+                // Die wear: each approved job is one more run on its die.
+                if ($job->die_id) {
+                    $job->die()->increment('jobs_run_count');
+                }
+
                 Lead::query()->where('converted_job_id', $job->id)->update(['status' => LeadStatus::Won]);
             }
         });

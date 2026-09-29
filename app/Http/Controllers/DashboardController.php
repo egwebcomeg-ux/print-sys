@@ -36,6 +36,12 @@ class DashboardController extends Controller
             'openLeads' => Lead::query()->whereIn('status', [LeadStatus::New, LeadStatus::Contacted])->count(),
             'failedInvoices' => $failedInvoices,
             'diesNeedingAttention' => CuttingDie::query()->where('condition', '!=', 'ready')->count(),
+            // Dies within 10% of (or past) their estimated lifespan.
+            'diesNearEndOfLife' => CuttingDie::query()
+                ->whereNotNull('estimated_lifespan_jobs')
+                ->whereRaw('jobs_run_count >= estimated_lifespan_jobs * 0.9')
+                ->count(),
+            'inProduction' => (int) ($counts[JobStatus::InProduction->value] ?? 0) + (int) ($counts[JobStatus::Approved->value] ?? 0),
             'recentJobs' => Job::query()->with('customer:id,name')->latest('id')->limit(8)->get()->map(fn (Job $job) => [
                 'id' => $job->id,
                 'name' => $job->displayName(),

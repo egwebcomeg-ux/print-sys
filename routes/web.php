@@ -22,6 +22,7 @@ use App\Http\Controllers\Jobs\JobStatusController;
 use App\Http\Controllers\Jobs\ManualJobController;
 use App\Http\Controllers\Jobs\OdooInvoiceSyncController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\ProductionBoardController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // --- Jobs --------------------------------------------------------------
     Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+    Route::get('production', ProductionBoardController::class)->name('production.board');
 
     Route::middleware('can:create-jobs')->group(function () {
         Route::get('jobs/create/box', [BoxJobController::class, 'create'])->name('jobs.box.create');

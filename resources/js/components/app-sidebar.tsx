@@ -22,6 +22,7 @@ import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/Pric
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import LeadController from '@/actions/App/Http/Controllers/LeadController';
+import ProductionBoardController from '@/actions/App/Http/Controllers/ProductionBoardController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -44,6 +45,11 @@ export function AppSidebar() {
     const workItems: NavItem[] = [
         { title: 'الرئيسية', href: dashboard(), icon: LayoutGrid },
         { title: 'الشغلانات', href: JobController.index(), icon: ClipboardList },
+        {
+            title: 'لوحة الإنتاج',
+            href: ProductionBoardController(),
+            icon: Factory,
+        },
         ...(can('manage-leads')
             ? [{ title: 'الفرص', href: LeadController.index(), icon: Target }]
             : []),

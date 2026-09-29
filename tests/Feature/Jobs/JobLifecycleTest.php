@@ -5,6 +5,7 @@ namespace Tests\Feature\Jobs;
 use App\Enums\JobStageStatus;
 use App\Enums\JobStatus;
 use App\Jobs\SyncOdooInvoice;
+use App\Models\CuttingDie;
 use App\Models\Job;
 use App\Models\Press;
 use App\Models\User;
@@ -21,7 +22,8 @@ class JobLifecycleTest extends TestCase
         Queue::fake();
         $sales = User::factory()->create();
         $production = User::factory()->production()->create();
-        $job = Job::factory()->create(['quantity' => 5000]);
+        $die = CuttingDie::factory()->create(['jobs_run_count' => 3]);
+        $job = Job::factory()->create(['quantity' => 5000, 'die_id' => $die->id, 'is_using_existing_die' => true]);
 
         $this->actingAs($sales)->patch(route('jobs.status.update', $job), ['status' => 'quoted'])->assertRedirect();
         $this->actingAs($sales)->patch(route('jobs.status.update', $job), ['status' => 'approved'])->assertRedirect();
@@ -29,6 +31,7 @@ class JobLifecycleTest extends TestCase
         $job->refresh();
         $this->assertSame(JobStatus::Approved, $job->status);
         $this->assertGreaterThan(0, $job->stages()->count(), 'approval seeds the default stages');
+        $this->assertSame(4, $die->fresh()->jobs_run_count, 'approval counts a run on the die');
 
         $this->actingAs($production)->patch(route('jobs.status.update', $job), ['status' => 'in_production'])->assertRedirect();
 
@@ -122,6 +125,7 @@ class JobLifecycleTest extends TestCase
 
         $this->actingAs($admin)->get(route('jobs.index'))->assertOk();
         $this->actingAs($admin)->get(route('dashboard'))->assertOk();
+        $this->actingAs($admin)->get(route('production.board'))->assertOk();
 
         foreach (JobStatus::cases() as $status) {
             $job = Job::factory()->status($status)->create();

@@ -1,10 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { AlertTriangle, Box, FileText, Users } from 'lucide-react';
+import { AlertTriangle, Box, Factory, FileText, Users } from 'lucide-react';
 import CuttingDieController from '@/actions/App/Http/Controllers/Catalog/CuttingDieController';
 import BoxJobController from '@/actions/App/Http/Controllers/Jobs/BoxJobController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import ManualJobController from '@/actions/App/Http/Controllers/Jobs/ManualJobController';
 import LeadController from '@/actions/App/Http/Controllers/LeadController';
+import ProductionBoardController from '@/actions/App/Http/Controllers/ProductionBoardController';
 import { DataTable, EmptyRow, Td, Th } from '@/components/crud/data-table';
 import { PageBody, PageHeader } from '@/components/crud/page-header';
 import { JobStatusBadge } from '@/components/jobs/status-badge';
@@ -19,12 +20,16 @@ export default function Dashboard({
     openLeads,
     failedInvoices,
     diesNeedingAttention,
+    diesNearEndOfLife,
+    inProduction,
     recentJobs,
 }: {
     statusCounts: { value: JobStatus; label: string; count: number }[];
     openLeads: number;
     failedInvoices: number;
     diesNeedingAttention: number;
+    diesNearEndOfLife: number;
+    inProduction: number;
     recentJobs: {
         id: number;
         name: string;
@@ -78,7 +83,9 @@ export default function Dashboard({
                 ))}
             </div>
 
-            {(failedInvoices > 0 || diesNeedingAttention > 0) && (
+            {(failedInvoices > 0 ||
+                diesNeedingAttention > 0 ||
+                diesNearEndOfLife > 0) && (
                 <div className="mb-6 space-y-2">
                     {failedInvoices > 0 && (
                         <Link
@@ -101,8 +108,32 @@ export default function Dashboard({
                             {diesNeedingAttention} اسطمبة محتاجة كاوتش أو صيانة
                         </Link>
                     )}
+                    {diesNearEndOfLife > 0 && (
+                        <Link
+                            href={CuttingDieController.index()}
+                            className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300"
+                        >
+                            <AlertTriangle className="size-4" />
+                            {diesNearEndOfLife} اسطمبة قرّبت على نهاية عمرها
+                            الافتراضي — راجعها قبل ما تتعطل في نص شغلانة
+                        </Link>
+                    )}
                 </div>
             )}
+
+            <Link
+                href={ProductionBoardController()}
+                className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-emerald-500/40"
+            >
+                <Factory className="size-6 text-emerald-400" />
+                <div>
+                    <div className="font-medium">لوحة الإنتاج</div>
+                    <div className="text-sm text-muted-foreground">
+                        {inProduction} شغلانة موافق عليها أو في الإنتاج — مقسّمة
+                        على المطابع
+                    </div>
+                </div>
+            </Link>
 
             <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
                 <div className="lg:col-span-2">
