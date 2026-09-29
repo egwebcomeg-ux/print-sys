@@ -33,6 +33,26 @@ class SettingsSeeder extends Seeder
             );
         }
 
+        // Company details printed on quotes (الإعدادات ← بيانات المصنع).
+        $company = [
+            ['company_name', 'Pantopack', 'اسم المصنع'],
+            ['company_address', '', 'العنوان'],
+            ['company_phone', '', 'التليفون'],
+            ['company_email', '', 'الإيميل'],
+            ['company_tax_id', '', 'رقم التسجيل الضريبي'],
+            ['quote_vat_percent', 14, 'نسبة الضريبة على عرض السعر (%)'],
+            ['quote_validity_days', 15, 'مدة صلاحية عرض السعر (يوم)'],
+            ['quote_notes', 'الأسعار لا تشمل التوصيل.
+يبدأ التنفيذ بعد اعتماد التصميم ودفع مقدم.', 'ملاحظات ثابتة أسفل عرض السعر'],
+        ];
+
+        foreach ($company as $order => [$key, $value, $label]) {
+            Setting::query()->firstOrCreate(
+                ['key' => $key],
+                ['value' => $value, 'group' => 'company', 'label_ar' => $label, 'sort_order' => $order],
+            );
+        }
+
         Settings::forget();
     }
 }

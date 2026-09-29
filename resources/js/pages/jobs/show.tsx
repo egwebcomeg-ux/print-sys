@@ -4,6 +4,7 @@ import {
     ArrowLeft,
     Check,
     CircleDashed,
+    FileText,
     Loader2,
     RefreshCw,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ import PressController from '@/actions/App/Http/Controllers/Catalog/PressControl
 import JobCompletionController from '@/actions/App/Http/Controllers/Jobs/JobCompletionController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import JobPressAssignmentController from '@/actions/App/Http/Controllers/Jobs/JobPressAssignmentController';
+import JobQuoteController from '@/actions/App/Http/Controllers/Jobs/JobQuoteController';
 import JobStageController from '@/actions/App/Http/Controllers/Jobs/JobStageController';
 import JobStatusController from '@/actions/App/Http/Controllers/Jobs/JobStatusController';
 import OdooInvoiceSyncController from '@/actions/App/Http/Controllers/Jobs/OdooInvoiceSyncController';
@@ -138,10 +140,21 @@ export default function JobShow({
                 title={`#${job.id} — ${job.name}`}
                 description={`${job.customer.name} · ${job.typeLabel} · اتسجلت ${date(job.createdAt)}`}
                 actions={
-                    <JobStatusBadge
-                        status={job.status}
-                        label={job.statusLabel}
-                    />
+                    <>
+                        <Button asChild variant="secondary">
+                            <a
+                                href={JobQuoteController.show.url(job.id)}
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <FileText /> عرض السعر (PDF)
+                            </a>
+                        </Button>
+                        <JobStatusBadge
+                            status={job.status}
+                            label={job.statusLabel}
+                        />
+                    </>
                 }
             />
 

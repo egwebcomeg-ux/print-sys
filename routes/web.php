@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CompanySettingsController;
 use App\Http\Controllers\Admin\PricingSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Catalog\CustomerController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Jobs\BoxJobController;
 use App\Http\Controllers\Jobs\JobCompletionController;
 use App\Http\Controllers\Jobs\JobController;
 use App\Http\Controllers\Jobs\JobPressAssignmentController;
+use App\Http\Controllers\Jobs\JobQuoteController;
 use App\Http\Controllers\Jobs\JobStageController;
 use App\Http\Controllers\Jobs\JobStatusController;
 use App\Http\Controllers\Jobs\ManualJobController;
@@ -37,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
+    Route::get('jobs/{job}/quote', [JobQuoteController::class, 'show'])->name('jobs.quote');
     // Per-transition role checks live in JobLifecycleService.
     Route::patch('jobs/{job}/status', [JobStatusController::class, 'update'])->name('jobs.status.update');
 
@@ -97,6 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:manage-settings')->group(function () {
         Route::get('admin/pricing', [PricingSettingsController::class, 'edit'])->name('pricing-settings.edit');
         Route::put('admin/pricing', [PricingSettingsController::class, 'update'])->name('pricing-settings.update');
+        Route::get('admin/company', [CompanySettingsController::class, 'edit'])->name('company-settings.edit');
+        Route::put('admin/company', [CompanySettingsController::class, 'update'])->name('company-settings.update');
     });
 });
 

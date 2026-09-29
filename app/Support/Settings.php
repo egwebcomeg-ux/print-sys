@@ -56,6 +56,25 @@ class Settings
         ];
     }
 
+    /**
+     * Company details for printed quotes.
+     *
+     * @return array{name: string, address: string, phone: string, email: string, taxId: string, vatPercent: float, validityDays: int, notes: string}
+     */
+    public static function company(): array
+    {
+        return [
+            'name' => (string) self::get('company_name', 'Pantopack'),
+            'address' => (string) self::get('company_address', ''),
+            'phone' => (string) self::get('company_phone', ''),
+            'email' => (string) self::get('company_email', ''),
+            'taxId' => (string) self::get('company_tax_id', ''),
+            'vatPercent' => (float) self::get('quote_vat_percent', 14),
+            'validityDays' => (int) self::get('quote_validity_days', 15),
+            'notes' => (string) self::get('quote_notes', ''),
+        ];
+    }
+
     public static function defaultMarginPercent(): float
     {
         return (float) self::get('default_margin_percent', 20);

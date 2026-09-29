@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     ClipboardList,
+    Building2,
     Factory,
     LayoutGrid,
     Layers,
@@ -16,6 +17,7 @@ import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerC
 import PaperSupplierController from '@/actions/App/Http/Controllers/Catalog/PaperSupplierController';
 import PaperTypeController from '@/actions/App/Http/Controllers/Catalog/PaperTypeController';
 import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
+import CompanySettingsController from '@/actions/App/Http/Controllers/Admin/CompanySettingsController';
 import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/PricingSettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
@@ -70,6 +72,11 @@ export function AppSidebar() {
     const adminItems: NavItem[] = [
         ...(can('manage-settings')
             ? [
+                  {
+                      title: 'بيانات المصنع',
+                      href: CompanySettingsController.edit(),
+                      icon: Building2,
+                  },
                   {
                       title: 'ثوابت التسعير',
                       href: PricingSettingsController.edit(),
