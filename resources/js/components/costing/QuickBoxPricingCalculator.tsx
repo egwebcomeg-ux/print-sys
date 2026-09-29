@@ -140,6 +140,10 @@ export interface BoxQuote {
   dieId: string | null;
   marginPercent: number;
   marginAmountEgp: number;
+  // Flat dieline size (from BOX_SHAPE_CALCULATORS) — the server re-prices from this.
+  flatWidthMm: number;
+  flatHeightMm: number;
+  interlockEnabled: boolean;
   costBreakdown: {
     paperCost: number;
     platesCost: number;
@@ -773,13 +777,27 @@ export default function QuickBoxPricingCalculator({
   const calc = useMemo(() => {
     const { flatWidthMm, flatHeightMm } = flatDims;
 
-    const fraction: DieCutTool['cutFraction'] = isUsingExistingDie && selectedDie ? selectedDie.cutFraction : '1/2';
-    const rawSheet = RAW_SHEET_OPTIONS[0];
+    // The selected paper's own stock size drives both cost and imposition.
+    const rawSheet = selectedPaperType?.standardSheetSize ?? RAW_SHEET_OPTIONS[0];
+    // Without a die, price on a half sheet; a box too big for it falls back to the full sheet.
+    const fraction: DieCutTool['cutFraction'] =
+      isUsingExistingDie && selectedDie
+        ? selectedDie.cutFraction
+        : (() => {
+            const half = getCutSheetDimsMm(rawSheet.widthCm, rawSheet.heightCm, '1/2');
+            return computeUpsGrid(half.widthMm - 2 * SIDE_TRIM_MM, half.heightMm - GRIPPER_ALLOWANCE_MM, flatWidthMm, flatHeightMm).ups > 0 ? '1/2' : '1/1';
+          })();
     const cutSheet = getCutSheetDimsMm(rawSheet.widthCm, rawSheet.heightCm, fraction);
     const usableWidthMm = cutSheet.widthMm - 2 * SIDE_TRIM_MM;
     const usableHeightMm = cutSheet.heightMm - GRIPPER_ALLOWANCE_MM;
 
-    const useInterlock = interlockEnabled && shapeCapableOfInterlock && !(isUsingExistingDie && selectedDie);
+    const plainGrid = computeUpsGrid(usableWidthMm, usableHeightMm, flatWidthMm, flatHeightMm);
+    const interlockCandidate = interlockEnabled && shapeCapableOfInterlock && !(isUsingExistingDie && selectedDie);
+    const interlockCols = Math.max(0, Math.floor(usableWidthMm / flatWidthMm));
+    const interlockPitch = flatHeightMm * INTERLOCK_HEIGHT_SAVING_RATIO;
+    const interlockRows = usableHeightMm >= flatHeightMm ? Math.floor((usableHeightMm - flatHeightMm) / interlockPitch) + 1 : 0;
+    // Nesting only pays off when it actually yields more ups than the plain grid.
+    const useInterlock = interlockCandidate && interlockCols * interlockRows > plainGrid.ups;
 
     let cols: number;
     let rows: number;
@@ -795,14 +813,13 @@ export default function QuickBoxPricingCalculator({
       unitHeightMm = flatHeightMm;
       rowPitchMm = flatHeightMm;
     } else if (useInterlock) {
-      cols = Math.max(0, Math.floor(usableWidthMm / flatWidthMm));
-      const pitch = flatHeightMm * INTERLOCK_HEIGHT_SAVING_RATIO;
-      rows = usableHeightMm >= flatHeightMm ? Math.floor((usableHeightMm - flatHeightMm) / pitch) + 1 : 0;
+      cols = interlockCols;
+      rows = interlockRows;
       unitWidthMm = flatWidthMm;
       unitHeightMm = flatHeightMm;
-      rowPitchMm = pitch;
+      rowPitchMm = interlockPitch;
     } else {
-      const grid = computeUpsGrid(usableWidthMm, usableHeightMm, flatWidthMm, flatHeightMm);
+      const grid = plainGrid;
       cols = grid.cols;
       rows = grid.rows;
       unitWidthMm = grid.unitWidthMm;
@@ -812,6 +829,7 @@ export default function QuickBoxPricingCalculator({
 
     const upsPerCutSheet = isUsingExistingDie && selectedDie ? selectedDie.upsOnCutSheet : Math.max(0, cols * rows);
     const cutSheetsPerRawSheet = CUT_FRACTION_DENOMINATOR[fraction];
+    const cannotFit = upsPerCutSheet === 0;
     const upsPerRawSheet = Math.max(1, upsPerCutSheet * cutSheetsPerRawSheet);
 
     const rawSheetsNeeded = Math.ceil((quantity / upsPerRawSheet) * (1 + pricing.spoilageRate));
@@ -862,6 +880,7 @@ export default function QuickBoxPricingCalculator({
       unitHeightMm,
       rowPitchMm,
       useInterlock,
+      cannotFit,
     };
   }, [flatDims, quantity, printColors, lamination, isUsingExistingDie, selectedDie, selectedPaperType, selectedGrammage, selectedSupplierPrice, interlockEnabled, shapeCapableOfInterlock, pricing, marginPercent]);
 
@@ -889,8 +908,17 @@ export default function QuickBoxPricingCalculator({
     });
   }, [copyText]);
 
+  // Why the order can't be confirmed yet (null = OK). Also shown under the button.
+  const confirmBlocker: string | null = !selectedPaperType || !selectedGrammage
+    ? 'اختار نوع الورق والجرام الأول'
+    : !selectedSupplierPrice
+      ? 'الجرام ده مالوش سعر مورد مسجل — ضيفه من صفحة أنواع الورق'
+      : calc.cannotFit
+        ? 'العلبة بالمقاس ده مش بتدخل الفرخ — راجع المقاسات أو الاسطمبة'
+        : null;
+
   const handleConfirm = useCallback(() => {
-    if (!selectedPaperType || !selectedGrammage) return;
+    if (!selectedPaperType || !selectedGrammage || !selectedSupplierPrice || calc.cannotFit) return;
     onConfirmOrder?.({
       boxType: boxTypeId,
       shape: boxShapeId,
@@ -916,6 +944,9 @@ export default function QuickBoxPricingCalculator({
       dieId: isUsingExistingDie && selectedDie ? selectedDie.id : null,
       marginPercent,
       marginAmountEgp: calc.marginAmount,
+      flatWidthMm: flatDims.flatWidthMm,
+      flatHeightMm: flatDims.flatHeightMm,
+      interlockEnabled,
       costBreakdown: {
         paperCost: calc.paperCost,
         platesCost: calc.platesCost,
@@ -926,7 +957,7 @@ export default function QuickBoxPricingCalculator({
         gluingCost: calc.gluingCost,
       },
     });
-  }, [selectedPaperType, selectedGrammage, selectedSupplierPrice, boxTypeId, boxShapeId, boxLengthCm, boxWidthCm, boxDepthCm, quantity, printColors, lamination, isUsingExistingDie, selectedDie, calc, marginPercent, onConfirmOrder]);
+  }, [selectedPaperType, selectedGrammage, selectedSupplierPrice, boxTypeId, boxShapeId, boxLengthCm, boxWidthCm, boxDepthCm, quantity, printColors, lamination, isUsingExistingDie, selectedDie, calc, marginPercent, flatDims, interlockEnabled, onConfirmOrder]);
 
   return (
     <div dir="rtl" className={`bg-slate-950 border border-slate-800 rounded-2xl p-4 lg:p-6 text-slate-100 ${className}`}>
@@ -1397,15 +1428,15 @@ export default function QuickBoxPricingCalculator({
         </section>
 
         {/* Column: حالة الاسطمبه */}
-        <section className="rounded-xl bg-red-950/30 border border-red-900/50 p-4">
-          <h3 className="text-base font-semibold mb-4 flex items-center gap-2 text-red-300">
+        <section className="rounded-xl bg-slate-900 border border-amber-500/30 p-4">
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2 text-amber-300">
             <Scissors className="w-4 h-4" />
             حالة الاسطمبه
           </h3>
 
           {closestDie ? (
             <div className="space-y-3">
-              <div className="rounded-lg bg-slate-950/60 border border-red-900/40 p-3">
+              <div className="rounded-lg bg-slate-950/60 border border-slate-800 p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">أقرب اسطمبه: {closestDie.die.code}</span>
                   {closestDie.isExactMatch && (
@@ -1438,21 +1469,21 @@ export default function QuickBoxPricingCalculator({
               <div className="space-y-2">
                 <button
                   onClick={handleUseExistingDieSize}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm py-2.5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm py-2.5 font-medium transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
                   قرب وسعر (بمقاس الاسطامبة)
                 </button>
                 <button
                   onClick={handleRequestNewDie}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm py-2.5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-100 text-sm py-2.5 transition-colors"
                 >
                   <Scissors className="w-4 h-4" />
                   اسطامبه جديدة (+{pricing.newDieCostEgp} ج)
                 </button>
                 <button
                   onClick={handlePriceWithoutNewDie}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm py-2.5 font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-100 text-sm py-2.5 transition-colors"
                 >
                   تسعير بدون اسطمبه (توفير التكلفة)
                 </button>
@@ -1464,7 +1495,7 @@ export default function QuickBoxPricingCalculator({
         </section>
 
         {/* Column: التفاصيل */}
-        <section className="rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col">
+        <section className="rounded-xl bg-slate-900 border border-slate-800 p-4 flex flex-col lg:sticky lg:top-4 lg:self-start">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold">التفاصيل</h3>
             <button
@@ -1522,18 +1553,20 @@ export default function QuickBoxPricingCalculator({
               <span className="text-slate-400">سعر العلبه</span>
               <span className="font-semibold">{calc.unitPrice.toFixed(2)} ج</span>
             </div>
-            <div className="flex items-center justify-between text-lg">
+            <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">الاجمالي</span>
-              <span className="font-bold text-emerald-400">{calc.totalPrice.toLocaleString('ar-EG')} ج</span>
+              <span className="text-2xl font-bold text-emerald-400 tabular-nums">{calc.totalPrice.toLocaleString('ar-EG')} ج</span>
             </div>
           </div>
 
           <button
             onClick={handleConfirm}
-            className="mt-4 w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm py-2.5 font-medium transition-colors"
+            disabled={confirmBlocker !== null}
+            className="mt-4 w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm py-2.5 font-medium transition-colors"
           >
             أكد الطلب وسجل العميل
           </button>
+          {confirmBlocker && <p className="mt-2 text-xs text-amber-400">{confirmBlocker}</p>}
         </section>
       </div>
     </div>

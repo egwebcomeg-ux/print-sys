@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCan } from '@/hooks/use-can';
+import { toast } from 'sonner';
 import type { Option } from '@/types';
 
 type PressRow = {
@@ -101,6 +102,11 @@ export default function PressesIndex({
                                             press.current_backlog_days
                                         }
                                         className="h-8 w-20"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.currentTarget.blur();
+                                            }
+                                        }}
                                         onBlur={(e) => {
                                             const days = Number(e.target.value);
                                             if (
@@ -116,7 +122,14 @@ export default function PressesIndex({
                                                         current_backlog_days:
                                                             days,
                                                     },
-                                                    { preserveScroll: true },
+                                                    {
+                                                        preserveScroll: true,
+                                                        onError: (errors) =>
+                                                            toast.error(
+                                                                errors.current_backlog_days ??
+                                                                    'القيمة مش مقبولة',
+                                                            ),
+                                                    },
                                                 );
                                             }
                                         }}

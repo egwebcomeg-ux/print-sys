@@ -14,6 +14,7 @@ import type { CustomerOption } from '@/components/jobs/customer-picker';
 import { ValidationSummary } from '@/components/jobs/validation-summary';
 import { Input } from '@/components/ui/input';
 import { asPayload } from '@/lib/payload';
+import { toast } from 'sonner';
 
 export default function CreateManualJob({
     papers,
@@ -59,6 +60,8 @@ export default function CreateManualJob({
                 preserveScroll: true,
                 onError: (e) => {
                     setErrors(e);
+                    // The confirm button sits far down the page — make the failure visible.
+                    toast.error(Object.values(e)[0] ?? 'راجع البيانات');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
             },

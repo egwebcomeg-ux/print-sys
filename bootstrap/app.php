@@ -20,7 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
+            // Capped: an unbounded Link header overflows nginx's FastCGI buffers (502).
+            AddLinkHeadersForPreloadedAssets::using(limit: 12),
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

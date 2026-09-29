@@ -39,7 +39,7 @@ class BoxJobController extends Controller
 
     public function store(StoreBoxJobRequest $request, CreateBoxJob $createBoxJob): RedirectResponse
     {
-        $job = $createBoxJob->handle($request->validated());
+        $job = $createBoxJob->handle($request->validated(), $request->pricing());
         $this->toast("تم تسجيل الشغلانة #{$job->id} كمسودة");
 
         return to_route('jobs.show', $job);
@@ -48,7 +48,12 @@ class BoxJobController extends Controller
     /** @return Collection<int, PaperType> */
     public static function paperCatalogue()
     {
-        return PaperType::query()->with('grammages.prices.supplier')->orderBy('name')->get();
+        // Only paper that can actually be priced (a grammage with a supplier price).
+        return PaperType::query()
+            ->whereHas('grammages.prices')
+            ->with(['grammages' => fn ($q) => $q->whereHas('prices')->with('prices.supplier')])
+            ->orderBy('name')
+            ->get();
     }
 
     /**

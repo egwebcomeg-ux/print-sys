@@ -24,15 +24,15 @@ export default function Security(props: Props) {
 
     return (
         <>
-            <Head title="Security settings" />
+            <Head title="الأمان" />
 
-            <h1 className="sr-only">Security settings</h1>
+            <h1 className="sr-only">الأمان</h1>
 
             <div className="space-y-6">
                 <Heading
                     variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
+                    title="تغيير الباسورد"
+                    description="استخدم باسورد طويل وصعب التخمين"
                 />
 
                 <Form
@@ -61,7 +61,7 @@ export default function Security(props: Props) {
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="current_password">
-                                    Current password
+                                    الباسورد الحالي
                                 </Label>
 
                                 <PasswordInput
@@ -70,14 +70,16 @@ export default function Security(props: Props) {
                                     name="current_password"
                                     className="mt-1 block w-full"
                                     autoComplete="current-password"
-                                    placeholder="Current password"
+                                    placeholder="الباسورد الحالي"
                                 />
 
                                 <InputError message={errors.current_password} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password">New password</Label>
+                                <Label htmlFor="password">
+                                    الباسورد الجديد
+                                </Label>
 
                                 <PasswordInput
                                     id="password"
@@ -85,7 +87,7 @@ export default function Security(props: Props) {
                                     name="password"
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
-                                    placeholder="New password"
+                                    placeholder="الباسورد الجديد"
                                     passwordrules={props.passwordRules}
                                 />
 
@@ -94,7 +96,7 @@ export default function Security(props: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password_confirmation">
-                                    Confirm password
+                                    تأكيد الباسورد
                                 </Label>
 
                                 <PasswordInput
@@ -102,7 +104,7 @@ export default function Security(props: Props) {
                                     name="password_confirmation"
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
-                                    placeholder="Confirm password"
+                                    placeholder="تأكيد الباسورد"
                                     passwordrules={props.passwordRules}
                                 />
 
@@ -116,7 +118,7 @@ export default function Security(props: Props) {
                                     disabled={processing}
                                     data-test="update-password-button"
                                 >
-                                    Save
+                                    حفظ
                                 </Button>
                             </div>
                         </>
@@ -141,7 +143,7 @@ export default function Security(props: Props) {
 Security.layout = {
     breadcrumbs: [
         {
-            title: 'Security settings',
+            title: 'الأمان',
             href: edit(),
         },
     ],

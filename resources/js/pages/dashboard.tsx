@@ -104,7 +104,7 @@ export default function Dashboard({
                 </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
                 <div className="lg:col-span-2">
                     <div className="mb-3 flex items-center justify-between">
                         <h2 className="text-base font-semibold">

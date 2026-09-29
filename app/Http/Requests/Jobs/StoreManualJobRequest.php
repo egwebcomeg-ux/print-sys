@@ -32,13 +32,13 @@ class StoreManualJobRequest extends FormRequest
             'lineItems.*.supplierPriceId' => ['nullable', 'integer', 'exists:paper_grammage_prices,id'],
             'lineItems.*.sheetWidthCm' => ['required', 'numeric', 'gt:0', 'max:999'],
             'lineItems.*.sheetHeightCm' => ['required', 'numeric', 'gt:0', 'max:999'],
-            'lineItems.*.sheetsCount' => ['required', 'integer', 'min:1'],
+            'lineItems.*.sheetsCount' => ['required', 'integer', 'min:1', 'max:10000000'],
             'costLines' => ['present', 'array', 'max:50'],
             'costLines.*.label' => ['nullable', 'string', 'max:255'],
-            'costLines.*.amountEgp' => ['required', 'numeric', 'min:0'],
+            'costLines.*.amountEgp' => ['required', 'numeric', 'min:0', 'max:1000000000'],
             'marginPercent' => ['required', 'numeric', 'min:0', 'max:1000'],
-            'producedQuantity' => ['nullable', 'integer', 'min:1'],
-            'finalPriceEgp' => ['required', 'numeric', 'min:0'],
+            'producedQuantity' => ['nullable', 'integer', 'min:1', 'max:10000000'],
+            'finalPriceEgp' => ['required', 'numeric', 'min:0', 'max:1000000000'],
         ];
     }
 

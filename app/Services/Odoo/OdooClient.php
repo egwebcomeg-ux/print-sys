@@ -50,6 +50,7 @@ class OdooClient implements OdooClientInterface
     {
         try {
             $response = Http::timeout($this->timeout)
+                ->withoutRedirecting()
                 ->acceptJson()
                 ->post(rtrim($this->url, '/').'/jsonrpc', [
                     'jsonrpc' => '2.0',

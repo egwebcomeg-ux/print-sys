@@ -5,8 +5,10 @@ namespace App\Http\Requests\Jobs;
 use App\Enums\BoxShape;
 use App\Enums\BoxType;
 use App\Enums\Lamination;
+use App\Models\CuttingDie;
 use App\Models\PaperGrammage;
 use App\Models\PaperGrammagePrice;
+use App\Services\Pricing\BoxPricer;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,10 +16,19 @@ use Illuminate\Validation\Rule;
 /**
  * Payload = the `BoxQuote` emitted by QuickBoxPricingCalculator's
  * onConfirmOrder, plus the customer (and optionally a title / lead).
+ *
+ * The browser's numbers are only used to make sure the user saw the same
+ * price the server computes (BoxPricer); the server's numbers are what gets
+ * stored. `pricing()` exposes them to CreateBoxJob after validation.
  */
 class StoreBoxJobRequest extends FormRequest
 {
     private const UNSAVED_PAPER = 'احفظ نوع الورق والسعر من صفحة أنواع الورق أولاً — الورق المضاف جوه الحاسبة مش بيتحفظ.';
+
+    private const COST_KEYS = ['paperCost', 'platesCost', 'pressRunCost', 'laminationCost', 'dieToolingCost', 'dieCuttingRunCost', 'gluingCost'];
+
+    /** @var array<string, mixed> */
+    private array $pricing = [];
 
     public function authorize(): bool
     {
@@ -36,24 +47,23 @@ class StoreBoxJobRequest extends FormRequest
             'dimensions.lengthCm' => ['required', 'numeric', 'gt:0', 'max:999'],
             'dimensions.widthCm' => ['required', 'numeric', 'gt:0', 'max:999'],
             'dimensions.depthCm' => ['required', 'numeric', 'min:0', 'max:999'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:100000000'],
+            'flatWidthMm' => ['required', 'numeric', 'gt:0', 'max:5000'],
+            'flatHeightMm' => ['required', 'numeric', 'gt:0', 'max:5000'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:10000000'],
             'paperTypeId' => ['required', 'integer', 'exists:paper_types,id'],
             'grammageId' => ['required', 'integer', 'exists:paper_grammages,id'],
-            'supplierPriceId' => ['nullable', 'integer', 'exists:paper_grammage_prices,id'],
-            'pricePerTonEgp' => ['nullable', 'numeric', 'min:0'],
+            'supplierPriceId' => ['required', 'integer', 'exists:paper_grammage_prices,id'],
             'printColors' => ['required', 'integer', 'min:0', 'max:12'],
             'lamination' => ['required', Rule::enum(Lamination::class)],
             'isUsingExistingDie' => ['required', 'boolean'],
             'dieId' => ['nullable', 'integer', 'exists:dies,id'],
-            'rawSheetsNeeded' => ['required', 'integer', 'min:0'],
-            'upsPerRawSheet' => ['required', 'integer', 'min:1'],
-            'interlocked' => ['required', 'boolean'],
+            'interlockEnabled' => ['required', 'boolean'],
             'marginPercent' => ['required', 'numeric', 'min:0', 'max:1000'],
-            'baseCostEgp' => ['required', 'numeric', 'min:0'],
-            'unitPriceEgp' => ['required', 'numeric', 'min:0'],
-            'totalPriceEgp' => ['required', 'numeric', 'min:0'],
-            'costBreakdown' => ['required', 'array'],
-            'costBreakdown.*' => ['numeric', 'min:0'],
+            'baseCostEgp' => ['required', 'numeric', 'min:0', 'max:1000000000'],
+            'unitPriceEgp' => ['required', 'numeric', 'min:0', 'max:1000000000'],
+            'totalPriceEgp' => ['required', 'numeric', 'min:0', 'max:1000000000'],
+            'costBreakdown' => ['required', 'array:'.implode(',', self::COST_KEYS)],
+            'costBreakdown.*' => ['required', 'numeric', 'min:0', 'max:1000000000'],
         ];
     }
 
@@ -66,6 +76,7 @@ class StoreBoxJobRequest extends FormRequest
             'paperTypeId.exists' => self::UNSAVED_PAPER,
             'grammageId.integer' => self::UNSAVED_PAPER,
             'grammageId.exists' => self::UNSAVED_PAPER,
+            'supplierPriceId.required' => 'الجرام ده مالوش سعر مورد مسجل — ضيفه من صفحة أنواع الورق',
             'supplierPriceId.integer' => self::UNSAVED_PAPER,
             'supplierPriceId.exists' => self::UNSAVED_PAPER,
         ];
@@ -78,36 +89,72 @@ class StoreBoxJobRequest extends FormRequest
                 return;
             }
 
-            $grammage = PaperGrammage::query()->find($this->integer('grammageId'));
+            $grammage = PaperGrammage::query()->with('paperType')->find($this->integer('grammageId'));
             if ($grammage->paper_type_id !== $this->integer('paperTypeId')) {
                 $validator->errors()->add('grammageId', 'الجرام ده مش تبع نوع الورق المختار');
+
+                return;
             }
 
-            if ($this->filled('supplierPriceId')) {
-                $price = PaperGrammagePrice::query()->find($this->integer('supplierPriceId'));
-                if ($price->paper_grammage_id !== $grammage->id) {
-                    $validator->errors()->add('supplierPriceId', 'السعر ده مش تبع الجرام المختار');
+            $price = PaperGrammagePrice::query()->find($this->integer('supplierPriceId'));
+            if ($price->paper_grammage_id !== $grammage->id) {
+                $validator->errors()->add('supplierPriceId', 'السعر ده مش تبع الجرام المختار');
+
+                return;
+            }
+
+            $die = null;
+            if ($this->boolean('isUsingExistingDie')) {
+                $die = $this->filled('dieId') ? CuttingDie::query()->find($this->integer('dieId')) : null;
+                if (! $die) {
+                    // The calculator starts in "existing die" mode with no die picked — make staff choose.
+                    $validator->errors()->add('dieId', 'حدد الاسطمبة من قسم الاسطمبات: «قرب وسعر» أو «تسعير بدون اسطمبه» أو «اسطامبه جديدة»');
+
+                    return;
                 }
             }
 
-            if ($this->boolean('isUsingExistingDie') && ! $this->filled('dieId')) {
-                // The calculator starts in "existing die" mode with no die picked,
-                // which prices without any die cost — make staff choose explicitly.
-                $validator->errors()->add('dieId', 'حدد الاسطمبة من قسم الاسطمبات: «قرب وسعر» أو «تسعير بدون اسطمبه» أو «اسطامبه جديدة»');
+            $this->pricing = app(BoxPricer::class)->price([
+                'flatWidthMm' => $this->float('flatWidthMm'),
+                'flatHeightMm' => $this->float('flatHeightMm'),
+                'shape' => $this->input('shape'),
+                'quantity' => $this->integer('quantity'),
+                'printColors' => $this->integer('printColors'),
+                'lamination' => $this->input('lamination'),
+                'isUsingExistingDie' => $this->boolean('isUsingExistingDie'),
+                'interlockEnabled' => $this->boolean('interlockEnabled'),
+                'marginPercent' => $this->float('marginPercent'),
+            ], $grammage, $price, $die);
+
+            if (! $this->pricing['fits']) {
+                $validator->errors()->add('quantity', 'العلبة بالمقاس ده مش بتدخل الفرخ — راجع المقاسات أو الاسطمبة');
+
+                return;
             }
 
-            // The box math runs in the calculator by design; make sure the
-            // numbers it sent are at least internally consistent.
-            $breakdownTotal = array_sum(array_map('floatval', $this->input('costBreakdown', [])));
-            if (abs($breakdownTotal - (float) $this->input('baseCostEgp')) > 1) {
-                $validator->errors()->add('baseCostEgp', 'بنود التكلفة مش مساوية لإجمالي التكلفة');
+            // The user must have confirmed the same price the server computes.
+            // Allow only rounding noise; anything else means stale prices/settings or tampering.
+            $stale = abs($this->pricing['baseCostEgp'] - $this->float('baseCostEgp')) > 0.05
+                || abs($this->pricing['unitPriceEgp'] - $this->float('unitPriceEgp')) > 0.005
+                || abs($this->pricing['totalPriceEgp'] - $this->float('totalPriceEgp')) > 0.05;
+
+            foreach (self::COST_KEYS as $key) {
+                $stale = $stale || abs($this->pricing['costBreakdown'][$key] - (float) $this->input("costBreakdown.{$key}")) > 0.05;
             }
 
-            $expectedTotal = (float) $this->input('baseCostEgp') * (1 + (float) $this->input('marginPercent') / 100);
-            $tolerance = 1 + 0.005 * $this->integer('quantity'); // unit price is rounded to 2 decimals
-            if (abs($expectedTotal - (float) $this->input('totalPriceEgp')) > $tolerance) {
-                $validator->errors()->add('totalPriceEgp', 'السعر النهائي مش مطابق للتكلفة + نسبة الربح');
+            if ($stale) {
+                $validator->errors()->add('totalPriceEgp', 'الأسعار أو ثوابت التسعير اتغيرت من ساعة ما فتحت الصفحة — اعمل تحديث للصفحة وراجع السعر.');
             }
         });
+    }
+
+    /**
+     * The server-computed price (valid only after validation passed).
+     *
+     * @return array<string, mixed>
+     */
+    public function pricing(): array
+    {
+        return $this->pricing;
     }
 }

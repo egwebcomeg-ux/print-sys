@@ -110,6 +110,7 @@ type JobDetail = {
             statusLabel: string;
             invoiceId: string | null;
             invoiceName: string | null;
+            billedTotal: number | null;
             manual: boolean;
             error: string | null;
             at: string | null;
@@ -165,7 +166,7 @@ export default function JobShow({
                 />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 *:min-w-0 lg:grid-cols-2">
                 {job.box ? (
                     <BoxDetails box={job.box} />
                 ) : (
@@ -175,7 +176,7 @@ export default function JobShow({
             </div>
 
             {inProductionPhase && (
-                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                <div className="mt-6 grid gap-6 *:min-w-0 lg:grid-cols-2">
                     <Stages job={job} canEdit={can('run-production')} />
                     <div className="space-y-4">
                         {can('run-production') ? (
@@ -246,9 +247,9 @@ function StatusStepper({ job }: { job: JobDetail }) {
                                 className={cn(
                                     'flex items-center gap-1.5 rounded-full px-3 py-1',
                                     index < currentIndex &&
-                                        'bg-emerald-500/10 text-emerald-400',
+                                        'text-emerald-400/80',
                                     index === currentIndex &&
-                                        'bg-primary text-primary-foreground',
+                                        'bg-emerald-500 font-medium text-slate-950',
                                     index > currentIndex &&
                                         'text-muted-foreground',
                                 )}
@@ -448,7 +449,7 @@ function Stages({ job, canEdit }: { job: JobDetail; canEdit: boolean }) {
         <Card className="gap-3 py-4">
             <CardHeader className="flex flex-row items-center justify-between px-4">
                 <CardTitle className="text-base">مراحل الإنتاج</CardTitle>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground" dir="ltr">
                     {doneCount} / {job.stages.length}
                 </span>
             </CardHeader>
@@ -497,7 +498,14 @@ function Stages({ job, canEdit }: { job: JobDetail; canEdit: boolean }) {
                                     variant={
                                         stage.status === 'in_progress'
                                             ? 'default'
-                                            : 'secondary'
+                                            : stage.status === 'done'
+                                              ? 'ghost'
+                                              : 'secondary'
+                                    }
+                                    className={
+                                        stage.status === 'done'
+                                            ? 'text-muted-foreground'
+                                            : undefined
                                     }
                                     onClick={() =>
                                         router.patch(
@@ -712,13 +720,14 @@ function Invoicing({ job, canManage }: { job: JobDetail; canManage: boolean }) {
                         <Th>المحاولة</Th>
                         <Th>الحالة</Th>
                         <Th>رقم الفاتورة</Th>
+                        <Th>المبلغ</Th>
                         <Th>الخطأ</Th>
                         <Th>الوقت</Th>
                     </tr>
                 </thead>
                 <tbody>
                     {job.odoo.syncs.length === 0 && (
-                        <EmptyRow colSpan={5}>مفيش محاولات لسه</EmptyRow>
+                        <EmptyRow colSpan={6}>مفيش محاولات لسه</EmptyRow>
                     )}
                     {job.odoo.syncs.map((sync) => (
                         <tr key={sync.id}>
@@ -742,6 +751,11 @@ function Invoicing({ job, canManage }: { job: JobDetail; canManage: boolean }) {
                             </Td>
                             <Td dir="ltr" className="text-right">
                                 {sync.invoiceName ?? sync.invoiceId ?? '—'}
+                            </Td>
+                            <Td>
+                                {sync.billedTotal !== null
+                                    ? egp(sync.billedTotal)
+                                    : '—'}
                             </Td>
                             <Td className="max-w-sm text-xs text-red-300">
                                 {sync.error ?? ''}

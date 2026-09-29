@@ -7,6 +7,7 @@ use App\Enums\JobType;
 use App\Enums\Lamination;
 use App\Models\Job;
 use App\Models\PaperGrammage;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -35,10 +36,12 @@ class CreateManualJob
             ->filter(fn ($line) => $line['amount_egp'] > 0)
             ->values();
 
-        $paperCost = round($items->sum('cost_egp'), 2);
-        $baseCost = round($paperCost + $costLines->sum('amount_egp'), 2);
+        // Same rounding order as the component: raw sums, round only the results.
+        $paperCost = $items->sum('raw_cost');
+        $baseCostRaw = $paperCost + $costLines->sum('amount_egp');
         $margin = (float) $quote['marginPercent'];
-        $finalPrice = round($baseCost * (1 + $margin / 100), 2);
+        $finalPrice = round($baseCostRaw * (1 + $margin / 100), 2);
+        $baseCost = round($baseCostRaw, 2);
 
         if (abs($finalPrice - (float) $quote['finalPriceEgp']) > 1) {
             throw ValidationException::withMessages([
@@ -46,7 +49,7 @@ class CreateManualJob
             ]);
         }
 
-        return DB::transaction(function () use ($quote, $items, $costLines, $baseCost, $margin, $finalPrice) {
+        return DB::transaction(function () use ($quote, $items, $costLines, $paperCost, $baseCost, $margin, $finalPrice) {
             $job = Job::query()->create([
                 'customer_id' => $quote['customer_id'],
                 'job_type' => JobType::Manual,
@@ -57,14 +60,14 @@ class CreateManualJob
                 'base_cost_egp' => $baseCost,
                 'margin_percent' => $margin,
                 'final_price_egp' => $finalPrice,
-                'quote_snapshot' => $quote,
+                'quote_snapshot' => Arr::only($quote, ['lineItems', 'costLines', 'marginPercent', 'producedQuantity']),
                 'status' => JobStatus::Draft,
             ]);
 
-            $job->paperItems()->createMany($items->all());
+            $job->paperItems()->createMany($items->map(fn ($item) => Arr::except($item, 'raw_cost'))->all());
 
-            if ($items->sum('cost_egp') > 0) {
-                $job->costLines()->create(['label' => 'ورق', 'amount_egp' => round($items->sum('cost_egp'), 2)]);
+            if ($paperCost > 0) {
+                $job->costLines()->create(['label' => 'ورق', 'amount_egp' => round($paperCost, 2)]);
             }
             $job->costLines()->createMany($costLines->all());
 
@@ -95,16 +98,19 @@ class CreateManualJob
                 throw ValidationException::withMessages(["lineItems.{$index}.grammageId" => 'الجرام ده مش تبع نوع الورق المختار']);
             }
 
+            $picked = ! empty($item['supplierPriceId']) ? $grammage->prices->firstWhere('id', (int) $item['supplierPriceId']) : null;
+            if (! empty($item['supplierPriceId']) && ! $picked) {
+                throw ValidationException::withMessages(["lineItems.{$index}.supplierPriceId" => 'السعر المختار مش تبع الجرام ده — اختار المورد تاني']);
+            }
             // Same fallback as the component: picked supplier, else the cheapest.
-            $price = ! empty($item['supplierPriceId'])
-                ? $grammage->prices->firstWhere('id', (int) $item['supplierPriceId'])
-                : $grammage->prices->first();
+            $price = $picked ?? $grammage->prices->first();
 
             if (! $price) {
                 throw ValidationException::withMessages(["lineItems.{$index}.supplierPriceId" => 'مفيش سعر مسجل للجرام ده']);
             }
 
             $weightKg = self::weightKg((float) $item['sheetWidthCm'], (float) $item['sheetHeightCm'], $grammage->gsm, (int) $item['sheetsCount']);
+            $rawCost = $weightKg * ((float) $price->price_per_ton_egp / 1000);
 
             return [
                 'label' => $item['label'],
@@ -114,7 +120,8 @@ class CreateManualJob
                 'sheet_height_cm' => $item['sheetHeightCm'],
                 'sheets_count' => $item['sheetsCount'],
                 'weight_kg' => round($weightKg, 3),
-                'cost_egp' => round($weightKg * ((float) $price->price_per_ton_egp / 1000), 2),
+                'cost_egp' => round($rawCost, 2),
+                'raw_cost' => $rawCost,
                 'sort_order' => $index,
             ];
         });

@@ -1,8 +1,11 @@
+// Latin digits everywhere for money and counts (matches the calculators' inputs).
 const egpFormatter = new Intl.NumberFormat('ar-EG', {
+    numberingSystem: 'latn',
     maximumFractionDigits: 2,
 });
 
 const numberFormatter = new Intl.NumberFormat('ar-EG', {
+    numberingSystem: 'latn',
     maximumFractionDigits: 3,
 });
 
@@ -29,6 +32,7 @@ export function date(value: string | null | undefined): string {
     }
 
     return new Date(value).toLocaleString('ar-EG', {
+        numberingSystem: 'latn',
         dateStyle: 'medium',
         timeStyle: 'short',
     });

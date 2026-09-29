@@ -55,7 +55,9 @@ class LeadController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Lead::query()->create($this->validated($request) + ['owner_user_id' => $request->user()->id]);
+        $data = $this->validated($request);
+        $data['owner_user_id'] ??= $request->user()->id;
+        Lead::query()->create($data);
         $this->toast('تم إضافة الفرصة');
 
         return to_route('leads.index');

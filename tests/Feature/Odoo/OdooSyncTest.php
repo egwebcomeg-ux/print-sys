@@ -56,7 +56,8 @@ class OdooSyncTest extends TestCase
 
         $line = $sync->request_payload['invoice_line_ids'][0][2];
         $this->assertSame(4800, $line['quantity']);               // produced, not quoted
-        $this->assertEquals(2.4, $line['price_unit']);            // 12000 / 5000
+        $this->assertEquals(2.4, $line['price_unit']);            // 12000 / 5000, 2 dp like Odoo
+        $this->assertEquals(11520, $sync->response_payload['billed_total']); // 4800 × 2.4
         $this->assertSame([[6, 0, [7]]], $line['tax_ids']);
         $this->assertSame("PP-{$job->id}", $sync->request_payload['ref']);
         $this->assertNotNull($job->customer->fresh()->odoo_partner_id);

@@ -8,6 +8,7 @@ use App\Models\Job;
 use App\Models\OdooInvoiceSync;
 use App\Models\User;
 use App\Services\Jobs\JobLifecycleService;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -53,7 +54,13 @@ class OdooInvoiceService
 
             $sync->update([
                 'status' => OdooSyncStatus::Success,
-                'response_payload' => ['id' => $moveId, 'name' => $move['name'] ?? null, 'state' => $move['state'] ?? null, 'reused' => isset($existing[0])],
+                'response_payload' => [
+                    'id' => $moveId,
+                    'name' => $move['name'] ?? null,
+                    'state' => $move['state'] ?? null,
+                    'reused' => isset($existing[0]),
+                    'billed_total' => self::billedTotal($payload),
+                ],
                 'synced_at' => now(),
                 'error_message' => null,
             ]);
@@ -72,11 +79,36 @@ class OdooInvoiceService
         return $sync;
     }
 
+    /** Untaxed line total of an account.move payload (qty × unit price, 2 dp). */
+    public static function billedTotal(array $payload): float
+    {
+        $total = 0.0;
+        foreach ($payload['invoice_line_ids'] ?? [] as $command) {
+            $line = $command[2] ?? [];
+            $total += ((float) ($line['quantity'] ?? 0)) * ((float) ($line['price_unit'] ?? 0));
+        }
+
+        return round($total, 2);
+    }
+
     /**
      * Manual fallback: staff created the invoice by hand in Odoo and record its id.
+     * When Odoo is configured, the id must exist there as a customer invoice.
+     *
+     * @throws ValidationException
      */
     public function recordManualInvoice(Job $job, string $odooInvoiceId, User $user): OdooInvoiceSync
     {
+        if (! config('odoo.fake')) {
+            $found = $this->odoo->executeKw('account.move', 'search_read', [[
+                ['name', '=', $odooInvoiceId], ['move_type', '=', 'out_invoice'],
+            ]], ['fields' => ['id'], 'limit' => 1]);
+
+            if (empty($found)) {
+                throw ValidationException::withMessages(['odoo_invoice_id' => 'مفيش فاتورة عميل بالرقم ده في أودو']);
+            }
+        }
+
         $sync = $job->odooSyncs()->create([
             'status' => OdooSyncStatus::Success,
             'odoo_invoice_id' => $odooInvoiceId,
@@ -101,15 +133,16 @@ class OdooInvoiceService
         $final = (float) $job->final_price_egp;
 
         if ($job->quantity) {
+            // 2 dp: Odoo's default "Product Price" precision, and what the job page shows.
             $lineQty = $produced;
-            $unitPrice = round($final / $job->quantity, 4);
+            $unitPrice = round($final / $job->quantity, 2);
             $lineName = $job->displayName();
         } else {
             // Manual job quoted as a lump sum (no piece count): bill the quoted
             // total as one line, noting the produced quantity.
             // TODO(confirm with Pantopack): is this the right rule for lump-sum jobs?
             $lineQty = 1;
-            $unitPrice = round($final, 4);
+            $unitPrice = round($final, 2);
             $lineName = "{$job->displayName()} — الكمية المنتجة {$produced}";
         }
 

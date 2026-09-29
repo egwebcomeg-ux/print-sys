@@ -37,8 +37,12 @@ class OdooInvoiceSyncController extends Controller
         }
 
         $data = $request->validate([
-            'odoo_invoice_id' => ['required', 'string', 'max:100'],
-        ], ['odoo_invoice_id.required' => 'اكتب رقم الفاتورة في أودو']);
+            'odoo_invoice_id' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9\/._-]+$/', 'unique:odoo_invoice_syncs,odoo_invoice_id'],
+        ], [
+            'odoo_invoice_id.required' => 'اكتب رقم الفاتورة في أودو',
+            'odoo_invoice_id.regex' => 'رقم الفاتورة بالشكل INV/2026/00042',
+            'odoo_invoice_id.unique' => 'رقم الفاتورة ده متسجل على شغلانة تانية',
+        ]);
 
         $service->recordManualInvoice($job, $data['odoo_invoice_id'], $request->user());
         $this->toast('تم تسجيل الفاتورة');

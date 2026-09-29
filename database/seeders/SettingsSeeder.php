@@ -16,13 +16,13 @@ class SettingsSeeder extends Seeder
     public function run(): void
     {
         $rows = [
-            ['spoilage_rate', 0.03, 'نسبة الهالك (من 0 لـ 1)', 'PLACEHOLDER — +3% أفرخ زيادة لهالك الماكينة'],
-            ['new_die_cost_egp', 650, 'تكلفة اسطمبة جديدة (ج)', 'PLACEHOLDER'],
-            ['plate_cost_per_color_egp', 150, 'تكلفة الزنك لكل لون (ج)', 'PLACEHOLDER'],
-            ['press_run_rate_per_color_per_1000_sheets_egp', 180, 'تكلفة الطباعة لكل لون لكل 1000 فرخ (ج)', 'PLACEHOLDER'],
-            ['lamination_rate_per_sheet_egp', ['matte' => 0.35, 'gloss' => 0.30], 'تكلفة السلوفان للفرخ (ج)', 'PLACEHOLDER — مط / لامع'],
-            ['die_cut_rate_per_sheet_egp', 0.15, 'تكلفة التكسير للفرخ (ج)', 'PLACEHOLDER'],
-            ['glue_fold_rate_per_unit_egp', 0.05, 'تكلفة اللصق والتطبيق للعلبة (ج)', 'PLACEHOLDER'],
+            ['spoilage_rate', 0.03, 'نسبة الهالك (من 0 لـ 1)', 'قيمة مبدئية — +3% أفرخ زيادة لهالك الماكينة'],
+            ['new_die_cost_egp', 650, 'تكلفة اسطمبة جديدة (ج)', 'قيمة مبدئية'],
+            ['plate_cost_per_color_egp', 150, 'تكلفة الزنك لكل لون (ج)', 'قيمة مبدئية'],
+            ['press_run_rate_per_color_per_1000_sheets_egp', 180, 'تكلفة الطباعة لكل لون لكل 1000 فرخ (ج)', 'قيمة مبدئية'],
+            ['lamination_rate_per_sheet_egp', ['matte' => 0.35, 'gloss' => 0.30], 'تكلفة السلوفان للفرخ (ج)', 'قيمة مبدئية — مط / لامع'],
+            ['die_cut_rate_per_sheet_egp', 0.15, 'تكلفة التكسير للفرخ (ج)', 'قيمة مبدئية'],
+            ['glue_fold_rate_per_unit_egp', 0.05, 'تكلفة اللصق والتطبيق للعلبة (ج)', 'قيمة مبدئية'],
             ['default_margin_percent', 20, 'نسبة الربح المبدئية في الحاسبة (%)', 'مجرد قيمة مبدئية — الموظف بيكتب النسبة لكل شغلانة'],
         ];
 

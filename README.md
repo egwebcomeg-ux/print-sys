@@ -15,11 +15,11 @@ composer run dev                                    # serve + queue:listen + vit
 
 App: http://127.0.0.1:8000 — seeded logins (password `password`, change them on any shared server):
 
-| Role | Email | Can |
-|---|---|---|
-| مدير | admin@pantopack.local | everything |
-| مبيعات | sales@pantopack.local | customers, leads, pricing/quotes, paper prices, invoicing |
-| إنتاج | production@pantopack.local | stages, press routing, backlog, completion |
+| Role   | Email                      | Can                                                       |
+| ------ | -------------------------- | --------------------------------------------------------- |
+| مدير   | admin@pantopack.local      | everything                                                |
+| مبيعات | sales@pantopack.local      | customers, leads, pricing/quotes, paper prices, invoicing |
+| إنتاج  | production@pantopack.local | stages, press routing, backlog, completion                |
 
 Public registration is off; admins add staff from **المستخدمين**.
 

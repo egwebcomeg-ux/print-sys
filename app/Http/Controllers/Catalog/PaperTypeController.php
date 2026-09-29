@@ -109,7 +109,7 @@ class PaperTypeController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', Rule::unique('paper_types', 'name')->ignore($request->route('paper_type'))],
             'category' => ['required', Rule::enum(PaperCategory::class)],
             'sheet_width_cm' => ['required', 'integer', 'min:10', 'max:300'],
             'sheet_height_cm' => ['required', 'integer', 'min:10', 'max:300'],

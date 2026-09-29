@@ -114,7 +114,10 @@ class JobDetailResource extends JsonResource
                     'invoiceId' => $sync->odoo_invoice_id,
                     'invoiceName' => $this->invoiceLabel($sync),
                     'manual' => $sync->isManual(),
-                    'error' => $sync->error_message,
+                    // Raw Odoo errors can reveal internals — only invoicing staff see them.
+                    'error' => $sync->error_message === null ? null
+                        : ($request->user()?->can('manage-invoicing') ? $sync->error_message : 'فشل الإرسال — راجع المبيعات'),
+                    'billedTotal' => $sync->response_payload['billed_total'] ?? null,
                     'at' => ($sync->synced_at ?? $sync->created_at)?->toIso8601String(),
                 ]),
                 'invoiced' => $this->status === JobStatus::Invoiced,

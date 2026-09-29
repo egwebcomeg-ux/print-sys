@@ -77,10 +77,10 @@ class CustomerController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[0-9+()\s-]+$/'],
             'email' => ['nullable', 'email', 'max:255'],
-            'credit_limit_egp' => ['nullable', 'numeric', 'min:0'],
+            'credit_limit_egp' => ['nullable', 'numeric', 'min:0', 'max:1000000000'],
             'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
+        ], ['phone.regex' => 'التليفون أرقام بس']);
     }
 }

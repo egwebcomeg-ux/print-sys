@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import PaperGrammageController from '@/actions/App/Http/Controllers/Catalog/PaperGrammageController';
 import PaperGrammagePriceController from '@/actions/App/Http/Controllers/Catalog/PaperGrammagePriceController';
 import PaperTypeController from '@/actions/App/Http/Controllers/Catalog/PaperTypeController';
@@ -62,7 +62,7 @@ export default function PaperTypeForm({
                 actions={
                     <Button asChild variant="ghost">
                         <Link href={PaperTypeController.index()}>
-                            رجوع للقائمة
+                            <ChevronRight /> رجوع للقائمة
                         </Link>
                     </Button>
                 }

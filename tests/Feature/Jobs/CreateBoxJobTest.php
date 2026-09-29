@@ -9,6 +9,7 @@ use App\Models\CuttingDie;
 use App\Models\Job;
 use App\Models\PaperGrammagePrice;
 use App\Models\User;
+use App\Services\Pricing\BoxPricer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,51 +17,60 @@ class CreateBoxJobTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return array<string, mixed> */
+    /**
+     * A BoxQuote payload whose numbers match what BoxPricer will compute
+     * (the request rejects anything else). 9×5×3 reverse-tuck box on the
+     * factory grammage (70×100 sheet), flat dieline 299×80 mm.
+     *
+     * @return array<string, mixed>
+     */
     private function quote(PaperGrammagePrice $price, array $overrides = []): array
     {
-        $breakdown = [
-            'paperCost' => 3000, 'platesCost' => 300, 'pressRunCost' => 200, 'laminationCost' => 150,
-            'dieToolingCost' => 650, 'dieCuttingRunCost' => 100, 'gluingCost' => 250,
-        ];
-        $base = array_sum($breakdown); // 4650
-        $margin = 20;
-        $quantity = 5000;
-        $unit = round($base * (1 + $margin / 100) / $quantity, 2);
-
-        return array_replace([
-            'customer_id' => Customer::factory()->create()->id,
+        $inputs = [
             'boxType' => 'medicine',
             'shape' => 'reverse_tuck_end',
             'dimensions' => ['lengthCm' => 9, 'widthCm' => 5, 'depthCm' => 3],
-            'quantity' => $quantity,
+            'flatWidthMm' => 299,
+            'flatHeightMm' => 80,
+            'quantity' => 3000,
+            'printColors' => 2,
+            'lamination' => 'matte',
+            'isUsingExistingDie' => false,
+            'dieId' => null,
+            'interlockEnabled' => true,
+            'marginPercent' => 20,
+        ];
+        $inputs = array_replace($inputs, array_intersect_key($overrides, $inputs));
+
+        $die = ! empty($overrides['dieId']) ? CuttingDie::query()->find($overrides['dieId']) : null;
+        $pricing = app(BoxPricer::class)->price($inputs, $price->grammage, $price, $die);
+
+        return array_replace($inputs, [
+            'customer_id' => Customer::factory()->create()->id,
             'paperTypeName' => 'x',
-            'gsm' => 300,
+            'gsm' => $price->grammage->gsm,
             'paperTypeId' => (string) $price->grammage->paper_type_id,
             'grammageId' => (string) $price->paper_grammage_id,
             'supplierPriceId' => (string) $price->id,
             'supplierName' => 'x',
             'pricePerTonEgp' => (float) $price->price_per_ton_egp,
-            'printColors' => 2,
-            'lamination' => 'matte',
-            'isUsingExistingDie' => false,
-            'dieId' => null,
-            'rawSheetsNeeded' => 900,
-            'upsPerRawSheet' => 6,
-            'interlocked' => true,
-            'marginPercent' => $margin,
-            'marginAmountEgp' => $base * $margin / 100,
-            'baseCostEgp' => $base,
-            'unitPriceEgp' => $unit,
-            'totalPriceEgp' => round($unit * $quantity, 2),
-            'costBreakdown' => $breakdown,
+            'rawSheetsNeeded' => $pricing['rawSheetsNeeded'],
+            'upsPerRawSheet' => $pricing['upsPerRawSheet'],
+            'interlocked' => $pricing['interlocked'],
+            'marginAmountEgp' => $pricing['marginAmountEgp'],
+            'baseCostEgp' => $pricing['baseCostEgp'],
+            'unitPriceEgp' => $pricing['unitPriceEgp'],
+            'totalPriceEgp' => $pricing['totalPriceEgp'],
+            'costBreakdown' => $pricing['costBreakdown'],
         ], $overrides);
     }
 
-    public function test_sales_can_confirm_a_box_quote_into_a_draft_job_with_cost_lines(): void
+    public function test_sales_can_confirm_a_box_quote_into_a_draft_job_with_server_priced_cost_lines(): void
     {
         $sales = User::factory()->create();
-        $price = PaperGrammagePrice::factory()->create();
+        $price = PaperGrammagePrice::factory()->create(['price_per_ton_egp' => 14000]);
+        $price->grammage->update(['gsm' => 300]);
+        $price = $price->fresh();
 
         $response = $this->actingAs($sales)->post(route('jobs.box.store'), $this->quote($price));
 
@@ -70,24 +80,57 @@ class CreateBoxJobTest extends TestCase
         $this->assertSame(JobType::Box, $job->job_type);
         $this->assertSame(JobStatus::Draft, $job->status);
         $this->assertSame($price->id, $job->paper_grammage_price_id);
-        $this->assertEquals(4650, (float) $job->base_cost_egp);
+
+        // Worked example: 70×100 @ 300 gsm @ 14,000/ton = 2.94/sheet.
+        // Half sheet usable 690×488: grid 12 ups, interlocked 14 → 14 × 2 = 28 per raw sheet.
+        // ⌈3000/28 × 1.03⌉ = 111 sheets → paper 326.34 + plates 300 + press 39.96
+        // + matte 38.85 + new die 650 + die-cut 16.65 + glue 150 = 1521.80.
+        $this->assertSame(111, $job->raw_sheets_needed);
+        $this->assertSame(28, $job->ups_per_raw_sheet);
+        $this->assertTrue($job->interlocked);
+        $this->assertEquals(1521.80, (float) $job->base_cost_egp);
         $this->assertEquals(20, (float) $job->margin_percent);
-        $this->assertSame(900, $job->raw_sheets_needed);
+        $this->assertEquals(1830.00, (float) $job->final_price_egp); // unit 0.61 × 3000
         $this->assertSame(7, $job->costLines()->count());
-        $this->assertEquals(4650, (float) $job->costLines()->sum('amount_egp'));
+        $this->assertEquals(1521.80, (float) $job->costLines()->sum('amount_egp'));
         $this->assertSame('medicine', $job->quote_snapshot['boxType']);
+        $this->assertArrayNotHasKey('customer_id', $job->quote_snapshot);
     }
 
-    public function test_existing_die_is_stored_when_used(): void
+    public function test_existing_die_is_stored_and_its_ups_drive_the_price(): void
     {
         $price = PaperGrammagePrice::factory()->create();
-        $die = CuttingDie::factory()->create();
+        $die = CuttingDie::factory()->create(['ups_on_cut_sheet' => 6, 'cut_fraction' => '1/2']);
 
         $this->actingAs(User::factory()->create())
             ->post(route('jobs.box.store'), $this->quote($price, ['isUsingExistingDie' => true, 'dieId' => (string) $die->id]))
             ->assertRedirect();
 
-        $this->assertSame($die->id, Job::query()->sole()->die_id);
+        $job = Job::query()->sole();
+        $this->assertSame($die->id, $job->die_id);
+        $this->assertSame(12, $job->ups_per_raw_sheet);
+        $this->assertFalse($job->interlocked);
+        $this->assertNull($job->costLines()->where('label', 'اسطمبة جديدة')->first());
+    }
+
+    public function test_tampered_prices_are_rejected(): void
+    {
+        $price = PaperGrammagePrice::factory()->create();
+        $user = User::factory()->create();
+
+        // Under-pricing from the browser (DevTools): internally consistent, but not the server's number.
+        $cheap = $this->quote($price);
+        $cheap['costBreakdown']['paperCost'] = 1;
+        $cheap['baseCostEgp'] = array_sum($cheap['costBreakdown']);
+        $cheap['unitPriceEgp'] = round($cheap['baseCostEgp'] * 1.2 / 3000, 2);
+        $cheap['totalPriceEgp'] = round($cheap['unitPriceEgp'] * 3000, 2);
+        $this->actingAs($user)->post(route('jobs.box.store'), $cheap)->assertSessionHasErrors('totalPriceEgp');
+
+        $this->actingAs($user)
+            ->post(route('jobs.box.store'), $this->quote($price, ['totalPriceEgp' => 999999]))
+            ->assertSessionHasErrors('totalPriceEgp');
+
+        $this->assertSame(0, Job::query()->count());
     }
 
     public function test_unsaved_local_paper_ids_are_rejected_with_a_clear_message(): void
@@ -111,17 +154,45 @@ class CreateBoxJobTest extends TestCase
             ->assertSessionHasErrors('grammageId');
     }
 
-    public function test_total_must_match_cost_plus_manual_margin(): void
+    public function test_paper_without_a_supplier_price_cannot_be_quoted(): void
     {
         $price = PaperGrammagePrice::factory()->create();
 
         $this->actingAs(User::factory()->create())
-            ->post(route('jobs.box.store'), $this->quote($price, ['totalPriceEgp' => 999999]))
-            ->assertSessionHasErrors('totalPriceEgp');
+            ->post(route('jobs.box.store'), $this->quote($price, ['supplierPriceId' => null]))
+            ->assertSessionHasErrors('supplierPriceId');
+    }
+
+    public function test_box_too_big_for_a_half_sheet_is_priced_on_the_full_sheet(): void
+    {
+        $price = PaperGrammagePrice::factory()->create();
+
+        // 715×300 mm flat (a 20×15×8 candy box): no fit on a 700×500 half sheet, 2 ups rotated on the full sheet.
+        $this->actingAs(User::factory()->create())
+            ->post(route('jobs.box.store'), $this->quote($price, ['flatWidthMm' => 715, 'flatHeightMm' => 300]))
+            ->assertRedirect();
+
+        $this->assertSame(2, Job::query()->sole()->ups_per_raw_sheet);
+    }
+
+    public function test_box_that_does_not_fit_any_sheet_is_rejected(): void
+    {
+        $price = PaperGrammagePrice::factory()->create();
+        $quote = $this->quote($price);
+        $quote['flatWidthMm'] = 1200; // longer than a 70×100 sheet in either orientation
 
         $this->actingAs(User::factory()->create())
-            ->post(route('jobs.box.store'), $this->quote($price, ['marginPercent' => -5]))
-            ->assertSessionHasErrors('marginPercent');
+            ->post(route('jobs.box.store'), $quote)
+            ->assertSessionHasErrors('quantity');
+    }
+
+    public function test_die_must_be_chosen_when_pricing_with_an_existing_die(): void
+    {
+        $price = PaperGrammagePrice::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('jobs.box.store'), $this->quote($price, ['isUsingExistingDie' => true, 'dieId' => null]))
+            ->assertSessionHasErrors('dieId');
     }
 
     public function test_production_role_cannot_create_quotes(): void

@@ -5,12 +5,13 @@ namespace App\Actions\Jobs;
 use App\Enums\JobStatus;
 use App\Enums\JobType;
 use App\Models\Job;
-use App\Models\PaperGrammagePrice;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Persists a confirmed box quote (QuickBoxPricingCalculator's BoxQuote).
+ * Persists a confirmed box quote. `$quote` is the validated BoxQuote payload
+ * (what the user saw); `$pricing` is BoxPricer's server-side recomputation
+ * (what gets stored and invoiced).
  */
 class CreateBoxJob
 {
@@ -25,14 +26,21 @@ class CreateBoxJob
         'gluingCost' => 'لصق وتطبيق',
     ];
 
+    /** What the snapshot keeps: the inputs that describe the quote, not the money (that's in columns). */
+    private const SNAPSHOT_KEYS = [
+        'boxType', 'shape', 'dimensions', 'quantity', 'paperTypeName', 'gsm', 'supplierName', 'pricePerTonEgp',
+        'printColors', 'lamination', 'isUsingExistingDie', 'dieId', 'flatWidthMm', 'flatHeightMm', 'interlockEnabled',
+    ];
+
     public function __construct(private readonly LinkLeadToJob $linkLead) {}
 
-    /** @param array<string, mixed> $quote validated StoreBoxJobRequest data */
-    public function handle(array $quote): Job
+    /**
+     * @param  array<string, mixed>  $quote  validated StoreBoxJobRequest data
+     * @param  array<string, mixed>  $pricing  StoreBoxJobRequest::pricing()
+     */
+    public function handle(array $quote, array $pricing): Job
     {
-        $this->warnOnStalePrice($quote);
-
-        return DB::transaction(function () use ($quote) {
+        return DB::transaction(function () use ($quote, $pricing) {
             $usingDie = (bool) $quote['isUsingExistingDie'];
 
             $job = Job::query()->create([
@@ -46,23 +54,23 @@ class CreateBoxJob
                 'depth_cm' => $quote['dimensions']['depthCm'],
                 'quantity' => $quote['quantity'],
                 'paper_grammage_id' => $quote['grammageId'],
-                'paper_grammage_price_id' => $quote['supplierPriceId'] ?? null,
+                'paper_grammage_price_id' => $quote['supplierPriceId'],
                 'print_colors' => $quote['printColors'],
                 'lamination' => $quote['lamination'],
                 'is_using_existing_die' => $usingDie,
                 'die_id' => $usingDie ? $quote['dieId'] : null,
-                'raw_sheets_needed' => $quote['rawSheetsNeeded'],
-                'ups_per_raw_sheet' => $quote['upsPerRawSheet'],
-                'interlocked' => $quote['interlocked'],
-                'base_cost_egp' => $quote['baseCostEgp'],
-                'margin_percent' => $quote['marginPercent'],
-                'final_price_egp' => $quote['totalPriceEgp'],
-                'quote_snapshot' => $quote,
+                'raw_sheets_needed' => $pricing['rawSheetsNeeded'],
+                'ups_per_raw_sheet' => $pricing['upsPerRawSheet'],
+                'interlocked' => $pricing['interlocked'],
+                'base_cost_egp' => $pricing['baseCostEgp'],
+                'margin_percent' => $pricing['marginPercent'],
+                'final_price_egp' => $pricing['totalPriceEgp'],
+                'quote_snapshot' => Arr::only($quote, self::SNAPSHOT_KEYS) + ['pricing' => $pricing],
                 'status' => JobStatus::Draft,
             ]);
 
             foreach (self::COST_LABELS as $key => $label) {
-                $amount = round((float) ($quote['costBreakdown'][$key] ?? 0), 2);
+                $amount = $pricing['costBreakdown'][$key];
                 if ($amount > 0) {
                     $job->costLines()->create(['label' => $label, 'amount_egp' => $amount]);
                 }
@@ -74,27 +82,5 @@ class CreateBoxJob
 
             return $job;
         });
-    }
-
-    /**
-     * The calculator prices with whatever it loaded; if the DB price changed
-     * meanwhile, keep the quote but leave a trace for review.
-     *
-     * @param  array<string, mixed>  $quote
-     */
-    private function warnOnStalePrice(array $quote): void
-    {
-        if (empty($quote['supplierPriceId']) || ! isset($quote['pricePerTonEgp'])) {
-            return;
-        }
-
-        $current = (float) PaperGrammagePrice::query()->whereKey($quote['supplierPriceId'])->value('price_per_ton_egp');
-        if (abs($current - (float) $quote['pricePerTonEgp']) > 0.01) {
-            Log::warning('Box quote priced with a stale paper price', [
-                'supplier_price_id' => $quote['supplierPriceId'],
-                'quoted' => $quote['pricePerTonEgp'],
-                'current' => $current,
-            ]);
-        }
     }
 }

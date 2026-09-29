@@ -28,8 +28,8 @@ export default function PricingSettings({
 
             <div className="mb-6 flex max-w-3xl items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                القيم المبدئية دي أمثلة (PLACEHOLDER) — حط أسعار المصنع الحقيقية
-                قبل ما تعتمد على التسعير.
+                القيم دي أمثلة مبدئية — حط أسعار المصنع الحقيقية قبل ما تعتمد
+                على التسعير.
             </div>
 
             <Form
