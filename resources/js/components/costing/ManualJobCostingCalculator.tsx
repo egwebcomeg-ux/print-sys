@@ -44,7 +44,8 @@ export type PaperCategory =
   | 'bristol_white_back'
   | 'kraft_liner'
   | 'couche'
-  | 'triplex_board';
+  | 'triplex_board'
+  | 'micro_flute';
 
 export interface PaperType {
   id: string;

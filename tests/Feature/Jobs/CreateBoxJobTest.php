@@ -126,6 +126,27 @@ class CreateBoxJobTest extends TestCase
         $this->assertContains([$plan['sheetWidthCm'], $plan['sheetHeightCm']], [[70, 100], [88, 119]]);
     }
 
+    public function test_micro_flute_phone_and_pizza_boxes_have_no_gluing_cost(): void
+    {
+        $price = PaperGrammagePrice::factory()->create(['price_per_ton_egp' => 14000]);
+
+        // Phone box 25×10×6 → 511×381 (+bleed); pizza 34×34×4 → 420×840.5 (+bleed).
+        foreach ([['phone', 'phone_box', 515, 385], ['pizza', 'pizza_box', 424, 845]] as [$type, $shape, $w, $h]) {
+            $this->actingAs(User::factory()->create())
+                ->post(route('jobs.box.store'), $this->quote($price, [
+                    'boxType' => $type, 'shape' => $shape, 'flatWidthMm' => $w, 'flatHeightMm' => $h,
+                    'interlockPitchMm' => null, 'interlockEnabled' => false, 'quantity' => 1000,
+                ]))
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            $job = Job::query()->latest('id')->firstOrFail();
+            $this->assertSame($shape, $job->box_shape->value);
+            $this->assertSame(0.0, (float) $job->quote_snapshot['pricing']['costBreakdown']['gluingCost']);
+            $this->assertFalse($job->costLines()->where('label', 'لصق وتطبيق')->exists());
+        }
+    }
+
     public function test_existing_die_is_stored_and_its_ups_drive_the_price(): void
     {
         $price = PaperGrammagePrice::factory()->create();

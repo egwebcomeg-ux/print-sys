@@ -36,7 +36,8 @@ export type PaperCategory =
   | 'bristol_white_back'
   | 'kraft_liner'
   | 'couche'
-  | 'triplex_board';
+  | 'triplex_board'
+  | 'micro_flute';
 
 export interface Press {
   id: string;
@@ -109,6 +110,7 @@ const PAPER_CATEGORY_LABELS: Record<PaperCategory, string> = {
   kraft_liner: 'كرافت',
   couche: 'كوشيه',
   triplex_board: 'تريبلكس',
+  micro_flute: 'كرتون مايكرو',
 };
 
 // ============================================================================

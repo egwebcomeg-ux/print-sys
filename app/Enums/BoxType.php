@@ -12,6 +12,9 @@ enum BoxType: string
     case Candy = 'candy';
     case Cosmetics = 'cosmetics';
     case Food = 'food';
+    case Pizza = 'pizza';
+    case Phone = 'phone';
+    case Oriental = 'oriental';
     case General = 'general';
 
     public function label(): string
@@ -21,6 +24,9 @@ enum BoxType: string
             self::Candy => 'حلويات',
             self::Cosmetics => 'مستحضرات تجميل',
             self::Food => 'أغذية',
+            self::Pizza => 'بيتزا',
+            self::Phone => 'تليفون',
+            self::Oriental => 'حلويات شرقي',
             self::General => 'عام',
         };
     }

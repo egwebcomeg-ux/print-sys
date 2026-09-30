@@ -2,6 +2,7 @@
 
 namespace App\Services\Pricing;
 
+use App\Enums\BoxShape;
 use App\Enums\CutFraction;
 use App\Enums\Lamination;
 use App\Models\CuttingDie;
@@ -35,7 +36,7 @@ class BoxPricer
 
     /**
      * @param  array{
-     *   flatWidthMm: float, flatHeightMm: float, interlockPitchMm: float|null, piecesPerBox: int,
+     *   shape: string, flatWidthMm: float, flatHeightMm: float, interlockPitchMm: float|null, piecesPerBox: int,
      *   quantity: int, printColors: int, lamination: string, isUsingExistingDie: bool,
      *   interlockEnabled: bool, marginPercent: float
      * }  $input
@@ -120,7 +121,7 @@ class BoxPricer
             'laminationCost' => $lamination === Lamination::None ? 0 : $cutSheetsRun * $pricing['laminationRatePerSheetEgp'][$lamination->value],
             'dieToolingCost' => $input['isUsingExistingDie'] ? 0 : $pricing['newDieCostEgp'],
             'dieCuttingRunCost' => $cutSheetsRun * $pricing['dieCutRatePerSheetEgp'],
-            'gluingCost' => $quantity * $pricing['glueFoldRatePerUnitEgp'],
+            'gluingCost' => (BoxShape::tryFrom($input['shape'])?->isGlued() ?? true) ? $quantity * $pricing['glueFoldRatePerUnitEgp'] : 0,
         ];
 
         $baseCost = array_sum($breakdown);

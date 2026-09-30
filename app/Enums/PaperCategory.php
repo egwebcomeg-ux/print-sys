@@ -14,6 +14,7 @@ enum PaperCategory: string
     case KraftLiner = 'kraft_liner';
     case Couche = 'couche';
     case TriplexBoard = 'triplex_board';
+    case MicroFlute = 'micro_flute';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum PaperCategory: string
             self::KraftLiner => 'كرافت',
             self::Couche => 'كوشيه',
             self::TriplexBoard => 'تريبلكس',
+            self::MicroFlute => 'كرتون مايكرو',
         };
     }
 }

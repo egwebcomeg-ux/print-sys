@@ -126,6 +126,7 @@ class StoreBoxJobRequest extends FormRequest
             }
 
             $this->pricing = app(BoxPricer::class)->price([
+                'shape' => (string) $this->input('shape'),
                 'flatWidthMm' => $this->float('flatWidthMm'),
                 'flatHeightMm' => $this->float('flatHeightMm'),
                 'interlockPitchMm' => $this->filled('interlockPitchMm') ? $this->float('interlockPitchMm') : null,
