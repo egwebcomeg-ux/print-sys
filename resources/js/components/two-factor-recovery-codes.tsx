@@ -57,11 +57,11 @@ export default function TwoFactorRecoveryCodes({
             <CardHeader>
                 <CardTitle className="flex gap-3">
                     <LockKeyhole className="size-4" aria-hidden="true" />
-                    2FA recovery codes
+                    رموز الاسترداد
                 </CardTitle>
                 <CardDescription>
-                    Recovery codes let you regain access if you lose your 2FA
-                    device. Store them in a secure password manager.
+                    رموز الاسترداد بتخليك تدخل لو ضاع موبايلك. احفظها في مكان
+                    آمن.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -76,7 +76,7 @@ export default function TwoFactorRecoveryCodes({
                             className="size-4"
                             aria-hidden="true"
                         />
-                        {codesAreVisible ? 'Hide' : 'View'} recovery codes
+                        {codesAreVisible ? 'إخفاء' : 'عرض'} رموز الاسترداد
                     </Button>
 
                     {canRegenerateCodes && (
@@ -145,13 +145,12 @@ export default function TwoFactorRecoveryCodes({
 
                                 <div className="text-xs text-muted-foreground select-none">
                                     <p id="regenerate-warning">
-                                        Each recovery code can be used once to
-                                        access your account and will be removed
-                                        after use. If you need more, click{' '}
+                                        كل رمز بيتستخدم مرة واحدة بس وبعدين
+                                        بيتمسح. لو محتاج رموز جديدة، اضغط{' '}
                                         <span className="font-bold">
-                                            Regenerate codes
+                                            رموز جديدة
                                         </span>{' '}
-                                        above.
+                                        فوق.
                                     </p>
                                 </div>
                             </>

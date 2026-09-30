@@ -14,16 +14,16 @@ import PasskeyVerify from '@/components/passkey-verify';
 export default function ConfirmPassword() {
     return (
         <>
-            <Head title="Confirm password" />
+            <Head title="تأكيد الباسورد" />
 
             <PasskeyVerify
                 routes={{
                     options: confirmOptions(),
                     submit: confirmStore(),
                 }}
-                label="Confirm with passkey"
-                loadingLabel="Confirming..."
-                separator="Or confirm with password"
+                label="تأكيد بمفتاح المرور"
+                loadingLabel="جاري التأكيد..."
+                separator="أو أكّد بالباسورد"
             />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
@@ -34,7 +34,7 @@ export default function ConfirmPassword() {
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder="الباسورد"
                                 autoComplete="current-password"
                                 autoFocus
                             />
@@ -49,7 +49,7 @@ export default function ConfirmPassword() {
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                Confirm password
+                                تأكيد الباسورد
                             </Button>
                         </div>
                     </div>
@@ -60,7 +60,6 @@ export default function ConfirmPassword() {
 }
 
 ConfirmPassword.layout = {
-    title: 'Confirm password',
-    description:
-        'This is a secure area of the application. Please confirm your password before continuing.',
+    title: 'تأكيد الباسورد',
+    description: 'الجزء ده محمي — أكّد الباسورد بتاعك الأول.',
 };

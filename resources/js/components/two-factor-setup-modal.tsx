@@ -104,7 +104,7 @@ function TwoFactorSetupStep({
                     <div className="relative flex w-full items-center justify-center">
                         <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
                         <span className="relative bg-card px-2 py-1">
-                            or, enter the code manually
+                            أو اكتب الكود يدوي
                         </span>
                     </div>
 
@@ -210,7 +210,7 @@ function TwoFactorVerificationStep({
                                 onClick={onBack}
                                 disabled={processing}
                             >
-                                Back
+                                رجوع
                             </Button>
                             <Button
                                 type="submit"
@@ -219,7 +219,7 @@ function TwoFactorVerificationStep({
                                     processing || code.length < OTP_MAX_LENGTH
                                 }
                             >
-                                Confirm
+                                تأكيد
                             </Button>
                         </div>
                     </div>
@@ -262,26 +262,25 @@ export default function TwoFactorSetupModal({
     }>(() => {
         if (twoFactorEnabled) {
             return {
-                title: 'Two-factor authentication enabled',
+                title: 'تم تفعيل التحقق بخطوتين',
                 description:
-                    'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-                buttonText: 'Close',
+                    'التحقق بخطوتين اتفعّل. امسح الـ QR أو اكتب مفتاح الإعداد في تطبيق المصادقة.',
+                buttonText: 'إغلاق',
             };
         }
 
         if (showVerificationStep) {
             return {
-                title: 'Verify authentication code',
-                description:
-                    'Enter the 6-digit code from your authenticator app',
+                title: 'تأكيد رمز المصادقة',
+                description: 'اكتب الرمز المكوّن من 6 أرقام من تطبيق المصادقة',
                 buttonText: 'Continue',
             };
         }
 
         return {
-            title: 'Enable two-factor authentication',
+            title: 'تفعيل التحقق بخطوتين',
             description:
-                'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
+                'عشان تكمّل، امسح الـ QR أو اكتب مفتاح الإعداد في تطبيق المصادقة (زي Google Authenticator)',
             buttonText: 'Continue',
         };
     }, [twoFactorEnabled, showVerificationStep]);
