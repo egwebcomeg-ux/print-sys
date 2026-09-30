@@ -63,7 +63,7 @@ type JobDetail = {
     statuses: Option[];
     next: { value: JobStatus; label: string; allowed: boolean } | null;
     editable: boolean;
-    warnings: { type: 'credit' | 'price'; message: string }[];
+    warnings: { type: 'credit' | 'price' | 'stock'; message: string }[];
     activity: {
         id: number;
         description: string;
@@ -202,9 +202,9 @@ export default function JobShow({
                 }
             />
 
-            {job.warnings.map((w) => (
+            {job.warnings.map((w, i) => (
                 <div
-                    key={w.type}
+                    key={`${w.type}-${i}`}
                     className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300"
                 >
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />

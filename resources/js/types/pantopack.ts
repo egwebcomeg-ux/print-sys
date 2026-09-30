@@ -29,6 +29,7 @@ export type Abilities = {
     'advance-sales-status': boolean;
     'run-production': boolean;
     'manage-invoicing': boolean;
+    'manage-inventory': boolean;
 };
 
 export type Customer = {

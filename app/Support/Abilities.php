@@ -31,6 +31,9 @@ class Abilities
         'advance-sales-status' => [UserRole::Admin, UserRole::Sales],       // draft → quoted → approved
         'run-production' => [UserRole::Admin, UserRole::Production],        // stages, press, in_production, completed
         'manage-invoicing' => [UserRole::Admin, UserRole::Sales],           // Odoo retry + manual fallback
+
+        // Inventory
+        'manage-inventory' => [UserRole::Admin, UserRole::Production],      // paper receipts, stock counts
     ];
 
     public static function register(): void

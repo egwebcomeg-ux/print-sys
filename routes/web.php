@@ -12,6 +12,7 @@ use App\Http\Controllers\Catalog\PaperSupplierController;
 use App\Http\Controllers\Catalog\PaperTypeController;
 use App\Http\Controllers\Catalog\PressController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Jobs\BoxJobController;
 use App\Http\Controllers\Jobs\JobCompletionController;
 use App\Http\Controllers\Jobs\JobController;
@@ -81,6 +82,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:manage-leads')->group(function () {
         Route::resource('leads', LeadController::class)->except(['show']);
         Route::post('leads/{lead}/convert', [LeadController::class, 'convert'])->name('leads.convert');
+    });
+
+    // --- Paper inventory (read: everyone, write: admin + production) ---------
+    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('inventory/{stock}', [InventoryController::class, 'show'])->name('inventory.show');
+    Route::middleware('can:manage-inventory')->group(function () {
+        Route::post('inventory', [InventoryController::class, 'store'])->name('inventory.store');
+        Route::patch('inventory/{stock}', [InventoryController::class, 'update'])->name('inventory.update');
+        Route::post('inventory/{stock}/receipts', [InventoryController::class, 'receive'])->name('inventory.receive');
+        Route::post('inventory/{stock}/adjustments', [InventoryController::class, 'adjust'])->name('inventory.adjust');
     });
 
     // --- Customers ---------------------------------------------------------

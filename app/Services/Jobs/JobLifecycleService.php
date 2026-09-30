@@ -8,6 +8,8 @@ use App\Events\JobStatusChanged;
 use App\Models\Job;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\Inventory\PaperInventory;
+use App\Support\Notify;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,7 +52,8 @@ class JobLifecycleService
             $job->produced_quantity = $produced;
         }
 
-        DB::transaction(function () use ($job, $to) {
+        $lowStock = [];
+        DB::transaction(function () use ($job, $to, $actor, &$lowStock) {
             $job->status = $to;
             $job->save();
 
@@ -63,8 +66,15 @@ class JobLifecycleService
                 }
 
                 Lead::query()->where('converted_job_id', $job->id)->update(['status' => LeadStatus::Won]);
+
+                // Approved work reserves its paper from tracked stock.
+                $lowStock = PaperInventory::consumeFor($job, $actor);
             }
         });
+
+        foreach ($lowStock as $stock) {
+            Notify::ability('manage-inventory', $job, "مخزون {$stock->label()} وصل {$stock->quantity_sheets} فرخ — محتاج طلب", 'warning', $actor);
+        }
 
         JobStatusChanged::dispatch($job, $from, $to, $actor);
 

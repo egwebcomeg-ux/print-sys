@@ -4,6 +4,7 @@ import {
     Box,
     Factory,
     FileText,
+    Package,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -12,6 +13,7 @@ import CuttingDieController from '@/actions/App/Http/Controllers/Catalog/Cutting
 import BoxJobController from '@/actions/App/Http/Controllers/Jobs/BoxJobController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import ManualJobController from '@/actions/App/Http/Controllers/Jobs/ManualJobController';
+import InventoryController from '@/actions/App/Http/Controllers/InventoryController';
 import LeadController from '@/actions/App/Http/Controllers/LeadController';
 import ProductionBoardController from '@/actions/App/Http/Controllers/ProductionBoardController';
 import { DataTable, EmptyRow, Td, Th } from '@/components/crud/data-table';
@@ -31,6 +33,7 @@ export default function Dashboard({
     diesNearEndOfLife,
     inProduction,
     receivables,
+    lowStock,
     recentJobs,
 }: {
     statusCounts: { value: JobStatus; label: string; count: number }[];
@@ -40,6 +43,7 @@ export default function Dashboard({
     diesNearEndOfLife: number;
     inProduction: number;
     receivables: number;
+    lowStock: { id: number; label: string; quantity: number }[];
     recentJobs: {
         id: number;
         name: string;
@@ -129,6 +133,25 @@ export default function Dashboard({
                         </Link>
                     )}
                 </div>
+            )}
+
+            {lowStock.length > 0 && (
+                <Link
+                    href={InventoryController.index()}
+                    className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 transition-colors hover:border-amber-500/60"
+                >
+                    <Package className="size-6 text-amber-400" />
+                    <div>
+                        <div className="font-medium">
+                            ورق محتاج طلب ({lowStock.length})
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            {lowStock
+                                .map((s) => `${s.label}: ${s.quantity} فرخ`)
+                                .join(' · ')}
+                        </div>
+                    </div>
+                </Link>
             )}
 
             {can('manage-invoicing') && receivables > 0 && (

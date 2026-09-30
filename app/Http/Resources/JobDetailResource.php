@@ -16,6 +16,7 @@ use App\Models\JobStage;
 use App\Models\OdooInvoiceSync;
 use App\Models\PaperPriceChange;
 use App\Models\Payment;
+use App\Services\Inventory\PaperInventory;
 use App\Services\Jobs\JobLifecycleService;
 use App\Support\CustomerBalance;
 use Illuminate\Http\Request;
@@ -200,6 +201,13 @@ class JobDetailResource extends JsonResource
                 ->exists();
             if ($moved) {
                 $warnings[] = ['type' => 'price', 'message' => 'سعر الورق اتغيّر من ساعة ما الشغلانة اتسعّرت — اعمل إعادة تسعير قبل ما تبعت العرض'];
+            }
+        }
+
+        // Tracked paper stock that won't cover this job once approved.
+        if ($open) {
+            foreach (PaperInventory::shortages($this->resource) as $short) {
+                $warnings[] = ['type' => 'stock', 'message' => sprintf('المخزن فيه %s فرخ %s والشغلانة محتاجة %s — اطلب ورق قبل الاعتماد', number_format($short['available']), $short['stock']->label(), number_format($short['needed']))];
             }
         }
 

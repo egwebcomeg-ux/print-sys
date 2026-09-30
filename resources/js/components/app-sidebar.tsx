@@ -7,6 +7,7 @@ import {
     Factory,
     LayoutGrid,
     Layers,
+    Package,
     Scissors,
     SlidersHorizontal,
     Truck,
@@ -24,6 +25,7 @@ import CompanySettingsController from '@/actions/App/Http/Controllers/Admin/Comp
 import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/PricingSettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
+import InventoryController from '@/actions/App/Http/Controllers/InventoryController';
 import LeadController from '@/actions/App/Http/Controllers/LeadController';
 import ProductionBoardController from '@/actions/App/Http/Controllers/ProductionBoardController';
 import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
@@ -58,6 +60,11 @@ export function AppSidebar() {
             ? [{ title: 'الفرص', href: LeadController.index(), icon: Target }]
             : []),
         { title: 'العملاء', href: CustomerController.index(), icon: Users },
+        {
+            title: 'مخزن الورق',
+            href: InventoryController.index(),
+            icon: Package,
+        },
     ];
 
     const catalogItems: NavItem[] = [
