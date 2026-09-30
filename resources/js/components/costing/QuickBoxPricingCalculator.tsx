@@ -149,6 +149,8 @@ export interface BoxQuote {
   interlockPitchMm: number | null;
   /** Pieces per box (2 for lid-and-base), and the sheet/cut the plan chose. */
   piecesPerBox: number;
+  /** Lid-and-base only: which side carries the double walls (follows the flute direction). */
+  doubleWallOn?: DoubleWallSide;
   sheetWidthCm: number;
   sheetHeightCm: number;
   cutFraction: DieCutTool['cutFraction'];
@@ -175,6 +177,8 @@ export interface PricingConstants {
 }
 
 /** A previously priced job, saved so staff can repeat it in one click instead of re-typing every field. */
+export type DoubleWallSide = 'length' | 'width';
+
 export interface SavedJobSpec {
   id: string;
   label: string; // مثال: "صيدلية العزبي — علبة دواء 9x5x3"
@@ -191,6 +195,7 @@ export interface SavedJobSpec {
   lamination: LaminationType;
   isUsingExistingDie: boolean;
   selectedDieId: string | null;
+  doubleWallOn?: DoubleWallSide | null;
 }
 
 interface QuickBoxPricingCalculatorProps {
@@ -351,17 +356,22 @@ function calcReverseTuckEnd(lengthMm: number, widthMm: number, depthMm: number):
  * Flat = (L + 2·wall) × (W + 2·(2·wall + board + 4)); the lid is +5 L / +10 W.
  * `depthMm` is the wall height. Returned dims are the lid (the larger piece).
  */
-function calcLidAndBase(lengthMm: number, widthMm: number, depthMm: number): FlatDims {
+function calcLidAndBase(lengthMm: number, widthMm: number, depthMm: number, options: ShapeOptions = {}): FlatDims {
+  // The double-walled side follows the board's flute direction, so the user picks it.
+  // Dates boxes BOTTOM/COVER (32×22×7 → 360×610 / 365×620) and 21×14.5×3.5 → 215×360 double
+  // the LENGTH; B/C double the WIDTH. Either way: double side = d + 4·wall + board + 8,
+  // plain side = d + 2·wall; the lid is +10 on the double side and +5 on the plain side.
+  const [plainMm, doubleMm] = options.doubleWallOn === 'length' ? [widthMm, lengthMm] : [lengthMm, widthMm];
   const endZoneMm = 2 * depthMm + BOARD_THICKNESS_MM + TRAY_RETURN_EXTRA_MM;
   const piece = (l: number, w: number) => ({ widthMm: l + 2 * depthMm + 2 * BLEED_MM, heightMm: w + 2 * endZoneMm + 2 * BLEED_MM });
-  const base = piece(lengthMm, widthMm);
-  const lid = piece(lengthMm + LID_CLEARANCE_LENGTH_MM, widthMm + LID_CLEARANCE_WIDTH_MM);
+  const base = piece(plainMm, doubleMm);
+  const lid = piece(plainMm + LID_CLEARANCE_LENGTH_MM, doubleMm + LID_CLEARANCE_WIDTH_MM);
   return {
     flatWidthMm: lid.widthMm,
     flatHeightMm: lid.heightMm,
     topFlapMm: endZoneMm,
     bottomFlapMm: endZoneMm,
-    panelWidthsMm: [depthMm, lengthMm + LID_CLEARANCE_LENGTH_MM, depthMm],
+    panelWidthsMm: [depthMm, plainMm + LID_CLEARANCE_LENGTH_MM, depthMm],
     panelLabels: ['جنب', 'غطاء', 'جنب'],
     piecesPerBox: 2,
     pieces: [
@@ -499,7 +509,9 @@ function calcPillowBag(lengthMm: number, widthMm: number, depthMm: number): Flat
   };
 }
 
-const BOX_SHAPE_CALCULATORS: Record<BoxShapeId, (lengthMm: number, widthMm: number, depthMm: number) => FlatDims> = {
+type ShapeOptions = { doubleWallOn?: DoubleWallSide };
+
+const BOX_SHAPE_CALCULATORS: Record<BoxShapeId, (lengthMm: number, widthMm: number, depthMm: number, options?: ShapeOptions) => FlatDims> = {
   reverse_tuck_end: calcReverseTuckEnd,
   straight_tuck_end: calcStraightTuckEnd,
   auto_lock_bottom: calcAutoLockBottom,
@@ -736,6 +748,7 @@ export default function QuickBoxPricingCalculator({
 
   const [boxTypeId, setBoxTypeId] = useState<BoxTypeId>('medicine');
   const [boxShapeId, setBoxShapeId] = useState<BoxShapeId>('reverse_tuck_end');
+  const [doubleWallOn, setDoubleWallOn] = useState<DoubleWallSide>('width');
   const [boxLengthCm, setBoxLengthCm] = useState(9);
   const [boxWidthCm, setBoxWidthCm] = useState(5);
   const [boxDepthCm, setBoxDepthCm] = useState(3);
@@ -784,6 +797,7 @@ export default function QuickBoxPricingCalculator({
   const handleRepeatJob = useCallback((job: SavedJobSpec) => {
     setBoxTypeId(job.boxTypeId);
     setBoxShapeId(job.boxShapeId);
+    setDoubleWallOn(job.doubleWallOn ?? 'width');
     setBoxLengthCm(job.lengthCm);
     setBoxWidthCm(job.widthCm);
     setBoxDepthCm(job.depthCm);
@@ -936,8 +950,8 @@ export default function QuickBoxPricingCalculator({
 
   // --- Flat dieline geometry (feeds both the preview and the pricing calc) --
   const flatDims = useMemo(
-    () => BOX_SHAPE_CALCULATORS[boxShapeId](boxLengthCm * 10, boxWidthCm * 10, boxDepthCm * 10),
-    [boxShapeId, boxLengthCm, boxWidthCm, boxDepthCm]
+    () => BOX_SHAPE_CALCULATORS[boxShapeId](boxLengthCm * 10, boxWidthCm * 10, boxDepthCm * 10, { doubleWallOn }),
+    [boxShapeId, boxLengthCm, boxWidthCm, boxDepthCm, doubleWallOn]
   );
 
   const shapeCapableOfInterlock = INTERLOCK_CAPABLE_SHAPES.includes(boxShapeId);
@@ -1165,6 +1179,7 @@ export default function QuickBoxPricingCalculator({
       interlockEnabled,
       interlockPitchMm: calc.interlockPitchMm,
       piecesPerBox: calc.piecesPerBox,
+      doubleWallOn: boxShapeId === 'lid_and_base' ? doubleWallOn : undefined,
       sheetWidthCm: calc.sheetWidthCm,
       sheetHeightCm: calc.sheetHeightCm,
       cutFraction: calc.fraction,
@@ -1598,6 +1613,27 @@ export default function QuickBoxPricingCalculator({
                   </option>
                 ))}
               </select>
+              {boxShapeId === 'lid_and_base' && (
+                <div className="mt-2">
+                  <label className="block text-xs text-slate-400 mb-1.5">الجدار المزدوج على (حسب اتجاه المضلّع)</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['length', 'width'] as DoubleWallSide[]).map((side) => (
+                      <button
+                        key={side}
+                        type="button"
+                        onClick={() => setDoubleWallOn(side)}
+                        className={`rounded-lg px-3 py-1.5 text-xs border transition-colors ${
+                          doubleWallOn === side
+                            ? 'bg-sky-500/15 border-sky-500 text-sky-300'
+                            : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {side === 'length' ? `الطول (${boxLengthCm} سم)` : `العرض (${boxWidthCm} سم)`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

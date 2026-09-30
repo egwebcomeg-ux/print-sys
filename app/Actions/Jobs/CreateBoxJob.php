@@ -30,7 +30,7 @@ class CreateBoxJob
     private const SNAPSHOT_KEYS = [
         'boxType', 'shape', 'dimensions', 'quantity', 'paperTypeName', 'gsm', 'supplierName', 'pricePerTonEgp',
         'printColors', 'lamination', 'isUsingExistingDie', 'dieId', 'flatWidthMm', 'flatHeightMm', 'interlockEnabled',
-        'interlockPitchMm', 'piecesPerBox', 'sheetWidthCm', 'sheetHeightCm', 'cutFraction',
+        'interlockPitchMm', 'piecesPerBox', 'doubleWallOn', 'sheetWidthCm', 'sheetHeightCm', 'cutFraction',
     ];
 
     public function __construct(private readonly LinkLeadToJob $linkLead) {}

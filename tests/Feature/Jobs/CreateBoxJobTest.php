@@ -114,7 +114,7 @@ class CreateBoxJobTest extends TestCase
             ->post(route('jobs.box.store'), $this->quote($price, [
                 'shape' => 'lid_and_base', 'flatWidthMm' => 316, 'flatHeightMm' => 350,
                 'interlockPitchMm' => null, 'piecesPerBox' => 2, 'quantity' => 1000,
-            ]))
+            ]) + ['doubleWallOn' => 'width'])
             ->assertRedirect();
 
         $job = Job::query()->sole();
@@ -124,6 +124,7 @@ class CreateBoxJobTest extends TestCase
         // 2,000 pieces (+3% spoilage) over the chosen sheet's ups.
         $this->assertSame((int) ceil(2000 / $job->ups_per_raw_sheet * 1.03), $job->raw_sheets_needed);
         $this->assertContains([$plan['sheetWidthCm'], $plan['sheetHeightCm']], [[70, 100], [88, 119]]);
+        $this->assertSame('width', $job->quote_snapshot['doubleWallOn'], 'flute-direction choice is kept for repeats');
     }
 
     public function test_micro_flute_phone_and_pizza_boxes_have_no_gluing_cost(): void

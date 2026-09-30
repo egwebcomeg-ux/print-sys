@@ -57,6 +57,7 @@ class StoreBoxJobRequest extends FormRequest
             'flatHeightMm' => ['required', 'numeric', 'gt:0', 'max:5000'],
             'interlockPitchMm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
             'piecesPerBox' => ['required', 'integer', 'min:1', 'max:4'],
+            'doubleWallOn' => ['nullable', 'in:length,width'],
             'sheetWidthCm' => ['required', 'integer', 'min:10', 'max:300'],
             'sheetHeightCm' => ['required', 'integer', 'min:10', 'max:300'],
             'cutFraction' => ['required', Rule::enum(CutFraction::class)],

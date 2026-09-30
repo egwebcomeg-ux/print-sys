@@ -23,6 +23,7 @@ class SavedJobSpecResource extends JsonResource
             'label' => "{$this->customer->name} — {$this->displayName()}",
             'boxTypeId' => $this->box_type?->value,
             'boxShapeId' => $this->box_shape?->value,
+            'doubleWallOn' => $this->quote_snapshot['doubleWallOn'] ?? null,
             'lengthCm' => (float) $this->length_cm,
             'widthCm' => (float) $this->width_cm,
             'depthCm' => (float) $this->depth_cm,
