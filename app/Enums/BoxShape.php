@@ -16,11 +16,12 @@ enum BoxShape: string
     case PizzaBox = 'pizza_box';
     case PhoneBox = 'phone_box';
     case GluedTrayLid = 'glued_tray_lid';
+    case SelfLockTrayLid = 'self_lock_tray_lid';
 
-    /** Micro-flute boxes delivered flat and folded by the customer — no gluing. */
+    /** Delivered flat and folded/locked by the customer — no gluing. */
     public function isGlued(): bool
     {
-        return ! in_array($this, [self::PizzaBox, self::PhoneBox], true);
+        return ! in_array($this, [self::PizzaBox, self::PhoneBox, self::SelfLockTrayLid], true);
     }
 
     public function label(): string
@@ -34,6 +35,7 @@ enum BoxShape: string
             self::PizzaBox => 'علبة بيتزا',
             self::PhoneBox => 'علبة تليفون',
             self::GluedTrayLid => 'صينية بغطا (لصق ٦ بونط)',
+            self::SelfLockTrayLid => 'تقفيل ذاتي بغطا',
         };
     }
 }

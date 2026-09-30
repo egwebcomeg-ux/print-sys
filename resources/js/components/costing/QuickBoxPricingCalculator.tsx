@@ -58,7 +58,7 @@ export interface DieCutTool {
   lengthCm: number; // طول
   widthCm: number; // عرض
   depthCm: number; // عمق / ارتفاع العلبة
-  closureType: 'reverse_tuck' | 'straight_tuck' | 'auto_bottom' | 'snap_lock' | 'front_lock' | 'glued_corners';
+  closureType: 'reverse_tuck' | 'straight_tuck' | 'auto_bottom' | 'snap_lock' | 'front_lock' | 'glued_corners' | 'self_lock';
   rackLocation: string; // e.g. "ستاند أ - رف 3"
   upsOnCutSheet: number; // عدد العلب في شابلونة الاسطامبة
   cutFraction: '1/1' | '1/2' | '1/4' | '1/6' | '1/8';
@@ -101,9 +101,9 @@ export type LaminationType = 'none' | 'matte' | 'gloss';
 export type ClosureType = DieCutTool['closureType'];
 
 /** The flat/dieline shape family used to compute unfolded dimensions. */
-export type BoxShapeId = 'reverse_tuck_end' | 'straight_tuck_end' | 'auto_lock_bottom' | 'pillow_bag' | 'lid_and_base' | 'pizza_box' | 'phone_box' | 'glued_tray_lid';
+export type BoxShapeId = 'reverse_tuck_end' | 'straight_tuck_end' | 'auto_lock_bottom' | 'pillow_bag' | 'lid_and_base' | 'pizza_box' | 'phone_box' | 'glued_tray_lid' | 'self_lock_tray_lid';
 
-export type BoxTypeId = 'medicine' | 'candy' | 'cosmetics' | 'food' | 'pizza' | 'phone' | 'oriental' | 'general';
+export type BoxTypeId = 'medicine' | 'candy' | 'cosmetics' | 'food' | 'pizza' | 'phone' | 'oriental' | 'cake' | 'general';
 
 interface BoxTypePreset {
   id: BoxTypeId;
@@ -232,6 +232,7 @@ const BOX_TYPE_PRESETS: BoxTypePreset[] = [
   { id: 'pizza', label: 'علبة بيتزا (كرتون مايكرو)', shape: 'pizza_box', suggestedClosure: 'front_lock', suggestedDims: { lengthCm: 34, widthCm: 34, depthCm: 4 }, note: 'معايَرة على رسومات 34×34×4 و45×44×4 و35×13×6 — الطول = عرض الفرد، العرض = من الأمام للخلف' },
   { id: 'phone', label: 'علبة تليفون (كرتون مايكرو)', shape: 'phone_box', suggestedClosure: 'front_lock', suggestedDims: { lengthCm: 25, widthCm: 10, depthCm: 6 }, note: 'معايَرة على رسومات 25×10×6 و35×13×6 و20×25×6 و33.5×22.8×5.5 — الطول = عرض القاع، العرض = من الأمام للخلف' },
   { id: 'oriental', label: 'علبة حلويات شرقي (لصق ٦ بونط)', shape: 'glued_tray_lid', suggestedClosure: 'glued_corners', suggestedDims: { lengthCm: 25, widthCm: 18, depthCm: 5 }, note: 'معايَرة على رسومات 25×18×5 و32×27×3 و19×19×3 — الطول = ناحية لسانات اللصق، العرض = من الوش للظهر' },
+  { id: 'cake', label: 'جاتوه / تورتة (تقفيل ذاتي)', shape: 'self_lock_tray_lid', suggestedClosure: 'self_lock', suggestedDims: { lengthCm: 20, widthCm: 20, depthCm: 9 }, note: 'معايَرة على Project 207 و208 و20×20×9 و31.5×31.5×13.7 — الطول = ناحية ودان القفل، العرض = من الوش للظهر' },
   { id: 'general', label: 'عام / مقاس مخصص', shape: 'reverse_tuck_end', suggestedClosure: 'reverse_tuck', note: 'مقاس حر تكتبه انت' },
 ];
 
@@ -244,6 +245,7 @@ const BOX_SHAPE_LABELS: Record<BoxShapeId, string> = {
   pizza_box: 'علبة بيتزا (قفل أمامي)',
   phone_box: 'علبة تليفون (Mailer)',
   glued_tray_lid: 'صينية بغطا — لصق ٦ بونط',
+  self_lock_tray_lid: 'تقفيل ذاتي بغطا (من غير لصق)',
 };
 
 // ============================================================================
@@ -277,7 +279,7 @@ const GRIPPER_ALLOWANCE_MM = 12;
 const SIDE_TRIM_MM = 5;
 
 // Interlocked imposition (تعشيق/تداخل الفلات بين الصفوف لتوفير الورق).
-const UNGLUED_SHAPES: BoxShapeId[] = ['pizza_box', 'phone_box'];
+const UNGLUED_SHAPES: BoxShapeId[] = ['pizza_box', 'phone_box', 'self_lock_tray_lid'];
 const INTERLOCK_CAPABLE_SHAPES: BoxShapeId[] = ['reverse_tuck_end', 'straight_tuck_end', 'auto_lock_bottom'];
 const INTERLOCK_HEIGHT_SAVING_RATIO = 0.85; // PLACEHOLDER — real saving depends on flap/notch geometry
 
@@ -434,6 +436,23 @@ function calcGluedTrayLid(lengthMm: number, widthMm: number, depthMm: number): F
   };
 }
 
+// Self-locking tray with hinged lid (جاتوه / تورتة) — from Project 207 (18×12.5×7 → 410.5×319),
+// Project 208 (19×16×7.55 → 489.5×340, 19×16×7.8 → 494.5×345), 20×20×9 → 600×380 and
+// 31.5×31.5×13.7 → 934.5×587. Across: side wall, base W, back wall, lid (W + 0.5), lid tuck flap.
+// Along: L + two walls (drawn at D − 0.5; we keep full D, the safer side). No glue.
+function calcSelfLockTrayLid(lengthMm: number, widthMm: number, depthMm: number): FlatDims {
+  const lidFlapMm = Math.max(20, Math.round(depthMm * 0.22)); // 18–20 mm, 30 on the 13.7 cm deep box. PLACEHOLDER.
+  const panelWidthsMm = [depthMm, widthMm, depthMm, widthMm + 0.5, lidFlapMm];
+  return {
+    flatWidthMm: panelWidthsMm.reduce((a, b) => a + b, 0) + 2 * BLEED_MM,
+    flatHeightMm: lengthMm + 2 * depthMm + 2 * BLEED_MM,
+    topFlapMm: depthMm,
+    bottomFlapMm: depthMm,
+    panelWidthsMm,
+    panelLabels: ['جنب', 'قاع', 'ظهر', 'غطا', 'لسان الغطا'],
+  };
+}
+
 function calcStraightTuckEnd(lengthMm: number, widthMm: number, depthMm: number): FlatDims {
   // Placeholder: straight-tuck dust flaps are usually shorter than reverse-tuck.
   const tuckFlapMm = Math.max(12, Math.round(depthMm * 0.5));
@@ -489,6 +508,7 @@ const BOX_SHAPE_CALCULATORS: Record<BoxShapeId, (lengthMm: number, widthMm: numb
   pizza_box: calcPizzaBox,
   phone_box: calcPhoneBox,
   glued_tray_lid: calcGluedTrayLid,
+  self_lock_tray_lid: calcSelfLockTrayLid,
 };
 
 // ============================================================================
@@ -1033,7 +1053,7 @@ export default function QuickBoxPricingCalculator({
     const laminationCost = lamination !== 'none' ? cutSheetsRun * pricing.laminationRatePerSheetEgp[lamination] : 0;
     const dieToolingCost = isUsingExistingDie ? 0 : pricing.newDieCostEgp;
     const dieCuttingRunCost = cutSheetsRun * pricing.dieCutRatePerSheetEgp;
-    // Micro-flute pizza/phone boxes ship flat (folded by the customer) — no gluing.
+    // Pizza/phone/self-lock boxes ship flat (folded by the customer) — no gluing.
     const gluingCost = UNGLUED_SHAPES.includes(boxShapeId) ? 0 : quantity * pricing.glueFoldRatePerUnitEgp;
 
     const baseCost = paperCost + platesCost + pressRunCost + laminationCost + dieToolingCost + dieCuttingRunCost + gluingCost;

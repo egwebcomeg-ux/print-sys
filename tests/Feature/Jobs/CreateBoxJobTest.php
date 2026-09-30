@@ -131,7 +131,7 @@ class CreateBoxJobTest extends TestCase
         $price = PaperGrammagePrice::factory()->create(['price_per_ton_egp' => 14000]);
 
         // Phone box 25×10×6 → 511×381 (+bleed); pizza 34×34×4 → 420×840.5 (+bleed).
-        foreach ([['phone', 'phone_box', 515, 385], ['pizza', 'pizza_box', 424, 845]] as [$type, $shape, $w, $h]) {
+        foreach ([['phone', 'phone_box', 515, 385], ['pizza', 'pizza_box', 424, 845], ['cake', 'self_lock_tray_lid', 604, 384]] as [$type, $shape, $w, $h]) {
             $this->actingAs(User::factory()->create())
                 ->post(route('jobs.box.store'), $this->quote($price, [
                     'boxType' => $type, 'shape' => $shape, 'flatWidthMm' => $w, 'flatHeightMm' => $h,

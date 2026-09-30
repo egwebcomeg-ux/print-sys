@@ -14,6 +14,7 @@ enum ClosureType: string
     case SnapLock = 'snap_lock';
     case FrontLock = 'front_lock';
     case GluedCorners = 'glued_corners';
+    case SelfLock = 'self_lock';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum ClosureType: string
             self::SnapLock => 'قفل سناب',
             self::FrontLock => 'قفل أمامي (بيتزا / تليفون)',
             self::GluedCorners => 'لصق أركان (٦ بونط)',
+            self::SelfLock => 'تقفيل ذاتي',
         };
     }
 }
