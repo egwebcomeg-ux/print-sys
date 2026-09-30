@@ -101,7 +101,16 @@ export default function LeadsIndex({
                 </thead>
                 <tbody>
                     {leads.data.length === 0 && (
-                        <EmptyRow colSpan={8}>مفيش فرص</EmptyRow>
+                        <EmptyRow colSpan={8}>
+                            <div className="space-y-3">
+                                <p>مفيش فرص بالحالة دي.</p>
+                                <Button asChild size="sm">
+                                    <Link href={LeadController.create()}>
+                                        <Plus /> فرصة جديدة
+                                    </Link>
+                                </Button>
+                            </div>
+                        </EmptyRow>
                     )}
                     {leads.data.map((lead) => (
                         <tr key={lead.id}>

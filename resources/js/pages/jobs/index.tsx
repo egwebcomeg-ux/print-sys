@@ -124,7 +124,18 @@ export default function JobsIndex({
                 </thead>
                 <tbody>
                     {jobs.data.length === 0 && (
-                        <EmptyRow colSpan={7}>مفيش شغلانات بالفلتر ده</EmptyRow>
+                        <EmptyRow colSpan={7}>
+                            <div className="space-y-3">
+                                <p>مفيش شغلانات بالفلتر ده.</p>
+                                {can('create-jobs') && (
+                                    <Button asChild size="sm">
+                                        <Link href={BoxJobController.create()}>
+                                            <Box /> سعّر علبة جديدة
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
+                        </EmptyRow>
                     )}
                     {jobs.data.map((job) => (
                         <tr key={job.id} className="hover:bg-accent/40">

@@ -19,7 +19,10 @@ export function DeleteButton({
             type="button"
             variant="ghost"
             size={size}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            // Muted until hovered, so it doesn't compete with the edit action.
+            className="text-muted-foreground hover:bg-red-500/10 hover:text-red-400"
+            title="مسح"
+            aria-label="مسح"
             onClick={() => {
                 if (window.confirm(confirmText)) {
                     router.delete(url, { preserveScroll: true });

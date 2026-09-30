@@ -64,7 +64,20 @@ export default function CustomersIndex({
                 </thead>
                 <tbody>
                     {customers.data.length === 0 && (
-                        <EmptyRow colSpan={6}>مفيش عملاء لسه</EmptyRow>
+                        <EmptyRow colSpan={6}>
+                            <div className="space-y-3">
+                                <p>مفيش عملاء لسه.</p>
+                                {can('manage-customers') && (
+                                    <Button asChild size="sm">
+                                        <Link
+                                            href={CustomerController.create()}
+                                        >
+                                            <Plus /> ضيف أول عميل
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
+                        </EmptyRow>
                     )}
                     {customers.data.map((customer) => (
                         <tr key={customer.id}>
