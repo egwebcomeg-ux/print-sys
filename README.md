@@ -106,6 +106,6 @@ vendor/bin/pint --test
     ```
 5. **نسخة احتياطية يومية** الساعة 2 الصبح (`php artisan backup:database`) في `storage/app/backups` وبتحتفظ بآخر 14. لو `mysqldump` مش في الـ PATH حط `MYSQLDUMP_PATH` في `.env`. انسخ النسخ دي برّه السيرفر كمان.
 6. بعد كل نشر: `composer install --no-dev -o` ثم `php artisan migrate --force` ثم `php artisan optimize`.
-7. المتطلبات: PHP ≥ 8.3 مع `intl`, `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, `bcmath` · MariaDB ≥ 10.6.
+7. المتطلبات: PHP ≥ 8.4 مع `intl`, `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, `bcmath` · MariaDB ≥ 10.6.
 
 > ملاحظة nginx: الـ Link header بتاع الـ preload محدود بـ 12 أصل (`bootstrap/app.php`) عشان ما يعملش 502 مع buffers الافتراضية.
