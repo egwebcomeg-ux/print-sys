@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Setting;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
@@ -46,6 +47,7 @@ class CompanySettingsController extends Controller
         }
 
         Settings::forget();
+        ActivityLog::record('settings', null, 'updated', 'تعديل بيانات المصنع', $data);
         $this->toast('تم حفظ بيانات المصنع');
 
         return back();

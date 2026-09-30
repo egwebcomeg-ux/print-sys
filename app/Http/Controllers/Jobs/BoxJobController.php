@@ -8,6 +8,7 @@ use App\Http\Requests\Jobs\StoreBoxJobRequest;
 use App\Http\Resources\DieResource;
 use App\Http\Resources\PaperTypeResource;
 use App\Http\Resources\SavedJobSpecResource;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\CuttingDie;
 use App\Models\Job;
@@ -40,6 +41,7 @@ class BoxJobController extends Controller
     public function store(StoreBoxJobRequest $request, CreateBoxJob $createBoxJob): RedirectResponse
     {
         $job = $createBoxJob->handle($request->validated(), $request->pricing());
+        ActivityLog::record('job', $job->id, 'created', 'اتسجلت بسعر '.number_format((float) $job->final_price_egp, 2).' ج');
         $this->toast("تم تسجيل الشغلانة #{$job->id} كمسودة");
 
         return to_route('jobs.show', $job);

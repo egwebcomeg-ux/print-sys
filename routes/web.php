@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\CompanySettingsController;
 use App\Http\Controllers\Admin\PricingSettingsController;
 use App\Http\Controllers\Admin\UserController;
@@ -22,7 +23,9 @@ use App\Http\Controllers\Jobs\JobStatusController;
 use App\Http\Controllers\Jobs\ManualJobController;
 use App\Http\Controllers\Jobs\OdooInvoiceSyncController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductionBoardController;
+use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
@@ -33,6 +36,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- Jobs --------------------------------------------------------------
     Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
     Route::get('production', ProductionBoardController::class)->name('production.board');
+
+    // --- Notifications (bell) ----------------------------------------------
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{id}', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
     Route::middleware('can:create-jobs')->group(function () {
         Route::get('jobs/create/box', [BoxJobController::class, 'create'])->name('jobs.box.create');
@@ -108,6 +116,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('admin/pricing', [PricingSettingsController::class, 'update'])->name('pricing-settings.update');
         Route::get('admin/company', [CompanySettingsController::class, 'edit'])->name('company-settings.edit');
         Route::put('admin/company', [CompanySettingsController::class, 'update'])->name('company-settings.update');
+        Route::get('admin/activity', ActivityLogController::class)->name('activity-log');
+        Route::get('reports', ReportsController::class)->name('reports');
     });
 });
 

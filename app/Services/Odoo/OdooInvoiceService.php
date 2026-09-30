@@ -4,6 +4,7 @@ namespace App\Services\Odoo;
 
 use App\Enums\JobStatus;
 use App\Enums\OdooSyncStatus;
+use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Models\OdooInvoiceSync;
 use App\Models\User;
@@ -109,6 +110,8 @@ class OdooInvoiceService
                 throw ValidationException::withMessages(['odoo_invoice_id' => 'مفيش فاتورة عميل بالرقم ده في أودو']);
             }
         }
+
+        ActivityLog::record('job', $job->id, 'invoice_manual', "سجّل فاتورة أودو يدوي: {$odooInvoiceId}", [], $user);
 
         $sync = $job->odooSyncs()->create([
             'status' => OdooSyncStatus::Success,

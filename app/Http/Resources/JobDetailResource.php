@@ -5,12 +5,14 @@ namespace App\Http\Resources;
 use App\Enums\JobStatus;
 use App\Enums\JobType;
 use App\Http\Controllers\Jobs\JobEditController;
+use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Models\JobCostLine;
 use App\Models\JobPaperItem;
 use App\Models\JobPressAssignment;
 use App\Models\JobStage;
 use App\Models\OdooInvoiceSync;
+use App\Models\PaperPriceChange;
 use App\Services\Jobs\JobLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -44,6 +46,16 @@ class JobDetailResource extends JsonResource
             ] : null,
             'customer' => $this->customer->only(['id', 'name', 'phone', 'email']),
             'editable' => JobEditController::editable($this->resource) && (bool) $request->user()?->can('create-jobs'),
+            'warnings' => $this->warnings(),
+            'activity' => ActivityLog::query()->with('user:id,name')
+                ->where('subject_type', 'job')->where('subject_id', $this->id)
+                ->latest('id')->limit(30)->get()
+                ->map(fn (ActivityLog $a) => [
+                    'id' => $a->id,
+                    'description' => $a->description,
+                    'user' => $a->user?->name ?? 'السيستم',
+                    'at' => $a->created_at?->toIso8601String(),
+                ]),
             'createdAt' => $this->created_at?->toIso8601String(),
 
             'box' => $this->job_type === JobType::Box ? [
@@ -126,6 +138,44 @@ class JobDetailResource extends JsonResource
                 'canInvoice' => $this->status === JobStatus::Completed,
             ],
         ];
+    }
+
+    /**
+     * Things staff should see before moving the job on.
+     *
+     * @return list<array{type: string, message: string}>
+     */
+    private function warnings(): array
+    {
+        $warnings = [];
+        $open = in_array($this->status, [JobStatus::Draft, JobStatus::Quoted], true);
+
+        // Credit limit: open (not yet invoiced) work for this customer, this job included.
+        $limit = $this->customer->credit_limit_egp;
+        if ($limit !== null && $this->status !== JobStatus::Invoiced) {
+            $exposure = (float) Job::query()
+                ->where('customer_id', $this->customer_id)
+                ->whereIn('status', [JobStatus::Approved, JobStatus::InProduction, JobStatus::Completed])
+                ->whereKeyNot($this->id)
+                ->sum('final_price_egp') + (float) $this->final_price_egp;
+            if ($exposure > (float) $limit) {
+                $warnings[] = ['type' => 'credit', 'message' => sprintf('شغل العميل المفتوح (%s ج) بيعدّي حد الائتمان (%s ج)', number_format($exposure, 2), number_format((float) $limit, 2))];
+            }
+        }
+
+        // Paper price moved since this quote was priced.
+        if ($open) {
+            $priceIds = collect([$this->paper_grammage_price_id])->merge($this->paperItems->pluck('paper_grammage_price_id'))->filter();
+            $moved = $priceIds->isNotEmpty() && PaperPriceChange::query()
+                ->whereIn('paper_grammage_price_id', $priceIds)
+                ->where('created_at', '>', $this->updated_at)
+                ->exists();
+            if ($moved) {
+                $warnings[] = ['type' => 'price', 'message' => 'سعر الورق اتغيّر من ساعة ما الشغلانة اتسعّرت — اعمل إعادة تسعير قبل ما تبعت العرض'];
+            }
+        }
+
+        return $warnings;
     }
 
     /**

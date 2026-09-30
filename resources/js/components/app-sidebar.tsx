@@ -1,7 +1,9 @@
 import { Link } from '@inertiajs/react';
 import {
     ClipboardList,
+    BarChart3,
     Building2,
+    History,
     Factory,
     LayoutGrid,
     Layers,
@@ -17,12 +19,14 @@ import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerC
 import PaperSupplierController from '@/actions/App/Http/Controllers/Catalog/PaperSupplierController';
 import PaperTypeController from '@/actions/App/Http/Controllers/Catalog/PaperTypeController';
 import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
+import ActivityLogController from '@/actions/App/Http/Controllers/Admin/ActivityLogController';
 import CompanySettingsController from '@/actions/App/Http/Controllers/Admin/CompanySettingsController';
 import PricingSettingsController from '@/actions/App/Http/Controllers/Admin/PricingSettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import LeadController from '@/actions/App/Http/Controllers/LeadController';
 import ProductionBoardController from '@/actions/App/Http/Controllers/ProductionBoardController';
+import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -78,6 +82,16 @@ export function AppSidebar() {
     const adminItems: NavItem[] = [
         ...(can('manage-settings')
             ? [
+                  {
+                      title: 'التقارير',
+                      href: ReportsController(),
+                      icon: BarChart3,
+                  },
+                  {
+                      title: 'سجل النشاط',
+                      href: ActivityLogController(),
+                      icon: History,
+                  },
                   {
                       title: 'بيانات المصنع',
                       href: CompanySettingsController.edit(),

@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'can' => Abilities::for($request->user()),
             ],
+            'unreadNotifications' => fn () => $request->user()?->unreadNotifications()->count() ?? 0,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

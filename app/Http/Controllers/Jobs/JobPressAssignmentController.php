@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Jobs;
 
 use App\Enums\JobStatus;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Models\Press;
+use App\Support\Notify;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +36,10 @@ class JobPressAssignmentController extends Controller
             'assigned_at' => now(),
         ]);
 
-        $this->toast('تم توزيع الشغلانة على '.Press::query()->whereKey($data['press_id'])->value('name'));
+        $pressName = (string) Press::query()->whereKey($data['press_id'])->value('name');
+        ActivityLog::record('job', $job->id, 'press', "اتوزعت على {$pressName}");
+        Notify::ability('run-production', $job, "اتوزعت على {$pressName}");
+        $this->toast("تم توزيع الشغلانة على {$pressName}");
 
         return back();
     }

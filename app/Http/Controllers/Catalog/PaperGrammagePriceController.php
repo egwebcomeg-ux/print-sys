@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Catalog;
 use App\Http\Controllers\Controller;
 use App\Models\PaperGrammage;
 use App\Models\PaperGrammagePrice;
+use App\Models\PaperPriceChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -22,10 +23,27 @@ class PaperGrammagePriceController extends Controller
             'price_per_ton_egp' => ['required', 'numeric', 'min:1', 'max:10000000'],
         ]);
 
-        PaperGrammagePrice::query()->updateOrCreate(
+        $old = PaperGrammagePrice::query()
+            ->where('paper_grammage_id', $grammage->id)
+            ->where('paper_supplier_id', $data['paper_supplier_id'])
+            ->value('price_per_ton_egp');
+
+        $price = PaperGrammagePrice::query()->updateOrCreate(
             ['paper_grammage_id' => $grammage->id, 'paper_supplier_id' => $data['paper_supplier_id']],
             ['price_per_ton_egp' => $data['price_per_ton_egp'], 'price_as_of' => now()],
         );
+
+        // Keep the history so price moves per supplier can be reviewed.
+        if ($old === null || (float) $old !== (float) $data['price_per_ton_egp']) {
+            PaperPriceChange::query()->create([
+                'paper_grammage_price_id' => $price->id,
+                'paper_grammage_id' => $grammage->id,
+                'paper_supplier_id' => $data['paper_supplier_id'],
+                'old_price_egp' => $old,
+                'new_price_egp' => $data['price_per_ton_egp'],
+                'user_id' => $request->user()->id,
+            ]);
+        }
 
         $this->toast('تم حفظ السعر');
 

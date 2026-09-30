@@ -57,6 +57,13 @@ type JobDetail = {
     statuses: Option[];
     next: { value: JobStatus; label: string; allowed: boolean } | null;
     editable: boolean;
+    warnings: { type: 'credit' | 'price'; message: string }[];
+    activity: {
+        id: number;
+        description: string;
+        user: string;
+        at: string | null;
+    }[];
     customer: {
         id: number;
         name: string;
@@ -168,6 +175,24 @@ export default function JobShow({
                 }
             />
 
+            {job.warnings.map((w) => (
+                <div
+                    key={w.type}
+                    className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300"
+                >
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <span>{w.message}</span>
+                    {w.type === 'price' && job.editable && (
+                        <Link
+                            href={JobEditController.edit(job.id)}
+                            className="ms-auto shrink-0 underline"
+                        >
+                            إعادة تسعير
+                        </Link>
+                    )}
+                </div>
+            ))}
+
             <StatusStepper job={job} />
 
             <div className="mb-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -223,6 +248,24 @@ export default function JobShow({
                 job.status === 'invoiced' ||
                 job.odoo.syncs.length > 0) && (
                 <Invoicing job={job} canManage={can('manage-invoicing')} />
+            )}
+
+            {job.activity.length > 0 && (
+                <section className="mt-6">
+                    <h2 className="mb-3 text-base font-semibold">
+                        سجل الشغلانة
+                    </h2>
+                    <ol className="space-y-2 border-s border-border ps-4">
+                        {job.activity.map((a) => (
+                            <li key={a.id} className="text-sm">
+                                <span className="text-muted-foreground">
+                                    {date(a.at)} · {a.user}:
+                                </span>{' '}
+                                {a.description}
+                            </li>
+                        ))}
+                    </ol>
+                </section>
             )}
         </PageBody>
     );

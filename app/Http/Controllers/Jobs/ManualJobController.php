@@ -6,6 +6,7 @@ use App\Actions\Jobs\CreateManualJob;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Jobs\StoreManualJobRequest;
 use App\Http\Resources\PaperTypeResource;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
@@ -28,6 +29,7 @@ class ManualJobController extends Controller
     public function store(StoreManualJobRequest $request, CreateManualJob $createManualJob): RedirectResponse
     {
         $job = $createManualJob->handle($request->validated());
+        ActivityLog::record('job', $job->id, 'created', 'اتسجلت بسعر '.number_format((float) $job->final_price_egp, 2).' ج');
         $this->toast("تم تسجيل الشغلانة #{$job->id} كمسودة");
 
         return to_route('jobs.show', $job);

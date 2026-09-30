@@ -3,12 +3,15 @@
 namespace App\Jobs;
 
 use App\Enums\JobStatus;
+use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Services\Odoo\Exceptions\OdooRejectedException;
 use App\Services\Odoo\OdooInvoiceService;
+use App\Support\Notify;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 /**
  * Queued Odoo invoicing for one completed job. Transient failures are
@@ -32,6 +35,16 @@ class SyncOdooInvoice implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return (string) $this->printJob->id;
+    }
+
+    /** Retries exhausted or Odoo rejected the invoice: tell invoicing staff. */
+    public function failed(?Throwable $e): void
+    {
+        $job = $this->printJob->fresh();
+        if ($job) {
+            ActivityLog::record('job', $job->id, 'invoice_failed', 'فشل إرسال الفاتورة لأودو', ['error' => mb_substr((string) $e?->getMessage(), 0, 300)], null);
+            Notify::ability('manage-invoicing', $job, 'فاتورة أودو فشلت — محتاجة إعادة محاولة أو تسجيل يدوي', 'error');
+        }
     }
 
     public function handle(OdooInvoiceService $service): void

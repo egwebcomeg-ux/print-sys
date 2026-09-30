@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Setting;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
@@ -50,6 +51,7 @@ class PricingSettingsController extends Controller
         }
 
         Settings::forget();
+        ActivityLog::record('settings', null, 'updated', 'تعديل ثوابت التسعير', $data);
         $this->toast('تم حفظ ثوابت التسعير');
 
         return back();

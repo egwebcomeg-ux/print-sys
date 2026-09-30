@@ -12,6 +12,7 @@ use App\Http\Requests\Jobs\StoreManualJobRequest;
 use App\Http\Resources\DieResource;
 use App\Http\Resources\PaperTypeResource;
 use App\Http\Resources\SavedJobSpecResource;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\CuttingDie;
 use App\Models\Job;
@@ -76,7 +77,9 @@ class JobEditController extends Controller
     {
         abort_unless(self::editable($job) && $job->job_type === JobType::Box, 403);
 
+        $old = (float) $job->final_price_egp;
         $createBoxJob->handle($request->validated(), $request->pricing(), $job);
+        self::logRepriced($job, $old);
         $this->toast("تم إعادة تسعير الشغلانة #{$job->id}");
 
         return to_route('jobs.show', $job);
@@ -86,10 +89,17 @@ class JobEditController extends Controller
     {
         abort_unless(self::editable($job) && $job->job_type === JobType::Manual, 403);
 
+        $old = (float) $job->final_price_egp;
         $createManualJob->handle($request->validated(), $job);
+        self::logRepriced($job, $old);
         $this->toast("تم إعادة تسعير الشغلانة #{$job->id}");
 
         return to_route('jobs.show', $job);
+    }
+
+    private static function logRepriced(Job $job, float $old): void
+    {
+        ActivityLog::record('job', $job->id, 'repriced', sprintf('إعادة تسعير: %s ← %s ج', number_format($old, 2), number_format((float) $job->fresh()->final_price_egp, 2)));
     }
 
     public static function editable(Job $job): bool
