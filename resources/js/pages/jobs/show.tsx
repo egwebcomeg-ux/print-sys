@@ -7,6 +7,7 @@ import {
     FileText,
     Loader2,
     Pencil,
+    QrCode,
     RefreshCw,
 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
@@ -17,6 +18,7 @@ import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import JobEditController from '@/actions/App/Http/Controllers/Jobs/JobEditController';
 import JobPressAssignmentController from '@/actions/App/Http/Controllers/Jobs/JobPressAssignmentController';
 import JobQuoteController from '@/actions/App/Http/Controllers/Jobs/JobQuoteController';
+import WorkOrderController from '@/actions/App/Http/Controllers/Jobs/WorkOrderController';
 import JobStageController from '@/actions/App/Http/Controllers/Jobs/JobStageController';
 import JobStatusController from '@/actions/App/Http/Controllers/Jobs/JobStatusController';
 import OdooInvoiceSyncController from '@/actions/App/Http/Controllers/Jobs/OdooInvoiceSyncController';
@@ -165,6 +167,15 @@ export default function JobShow({
                                 rel="noopener"
                             >
                                 <FileText /> عرض السعر (PDF)
+                            </a>
+                        </Button>
+                        <Button asChild variant="secondary">
+                            <a
+                                href={WorkOrderController.show.url(job.id)}
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <QrCode /> أمر الشغل
                             </a>
                         </Button>
                         <JobStatusBadge

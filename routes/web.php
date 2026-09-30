@@ -22,6 +22,7 @@ use App\Http\Controllers\Jobs\JobStageController;
 use App\Http\Controllers\Jobs\JobStatusController;
 use App\Http\Controllers\Jobs\ManualJobController;
 use App\Http\Controllers\Jobs\OdooInvoiceSyncController;
+use App\Http\Controllers\Jobs\WorkOrderController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductionBoardController;
@@ -54,6 +55,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
     Route::get('jobs/{job}/quote', [JobQuoteController::class, 'show'])->name('jobs.quote');
+    Route::get('jobs/{job}/work-order', [WorkOrderController::class, 'show'])->name('jobs.work-order');
+    Route::get('jobs/{job}/scan', [WorkOrderController::class, 'scan'])->name('jobs.scan');
     // Per-transition role checks live in JobLifecycleService.
     Route::patch('jobs/{job}/status', [JobStatusController::class, 'update'])->name('jobs.status.update');
 
