@@ -41,6 +41,7 @@ class PricingSettingsController extends Controller
             'die_cut_rate_per_sheet_egp' => ['required', 'numeric', 'min:0'],
             'glue_fold_rate_per_unit_egp' => ['required', 'numeric', 'min:0'],
             'default_margin_percent' => ['required', 'numeric', 'min:0', 'max:500'],
+            'billing_tolerance_percent' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);
 
         foreach ($data as $key => $value) {

@@ -75,6 +75,12 @@ class Settings
         ];
     }
 
+    /** Produced quantity within ±this % of the quoted one is billed at the quoted price. */
+    public static function billingTolerancePercent(): float
+    {
+        return (float) self::get('billing_tolerance_percent', 10);
+    }
+
     public static function defaultMarginPercent(): float
     {
         return (float) self::get('default_margin_percent', 20);

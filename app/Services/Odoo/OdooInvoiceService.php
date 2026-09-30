@@ -8,6 +8,7 @@ use App\Models\Job;
 use App\Models\OdooInvoiceSync;
 use App\Models\User;
 use App\Services\Jobs\JobLifecycleService;
+use App\Support\Settings;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -133,14 +134,22 @@ class OdooInvoiceService
         $final = (float) $job->final_price_egp;
 
         if ($job->quantity) {
-            // 2 dp: Odoo's default "Product Price" precision, and what the job page shows.
-            $lineQty = $produced;
+            // Fixed-price rule: within the billing tolerance the customer pays the
+            // quoted total (industry ±10% over/under); outside it, the produced
+            // quantity × the quoted unit price (2 dp — Odoo's default precision).
             $unitPrice = round($final / $job->quantity, 2);
-            $lineName = $job->displayName();
+            $deviation = abs($produced - $job->quantity) / $job->quantity * 100;
+            if ($deviation <= Settings::billingTolerancePercent()) {
+                $lineQty = 1;
+                $unitPrice = round($final, 2);
+                $lineName = "{$job->displayName()} — {$job->quantity} قطعة (المنتج فعليًا {$produced})";
+            } else {
+                $lineQty = $produced;
+                $lineName = $job->displayName();
+            }
         } else {
             // Manual job quoted as a lump sum (no piece count): bill the quoted
             // total as one line, noting the produced quantity.
-            // TODO(confirm with Pantopack): is this the right rule for lump-sum jobs?
             $lineQty = 1;
             $unitPrice = round($final, 2);
             $lineName = "{$job->displayName()} — الكمية المنتجة {$produced}";

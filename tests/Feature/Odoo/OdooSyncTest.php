@@ -40,9 +40,10 @@ class OdooSyncTest extends TestCase
         ]);
     }
 
-    public function test_invoice_uses_produced_quantity_and_marks_job_invoiced(): void
+    public function test_within_tolerance_bills_the_quoted_price_and_marks_job_invoiced(): void
     {
-        $job = $this->completedJob();
+        $this->seed(); // billing tolerance setting (10%)
+        $job = $this->completedJob(); // 4800 of 5000 = -4% → quoted price
 
         SyncOdooInvoice::dispatchSync($job);
 
@@ -55,12 +56,24 @@ class OdooSyncTest extends TestCase
         $this->assertStringStartsWith('INV/', $sync->response_payload['name']);
 
         $line = $sync->request_payload['invoice_line_ids'][0][2];
-        $this->assertSame(4800, $line['quantity']);               // produced, not quoted
-        $this->assertEquals(2.4, $line['price_unit']);            // 12000 / 5000, 2 dp like Odoo
-        $this->assertEquals(11520, $sync->response_payload['billed_total']); // 4800 × 2.4
+        $this->assertSame(1, $line['quantity']);
+        $this->assertEquals(12000, $line['price_unit']);          // the quoted total
+        $this->assertStringContainsString('4800', $line['name']);
+        $this->assertEquals(12000, $sync->response_payload['billed_total']);
         $this->assertSame([[6, 0, [7]]], $line['tax_ids']);
         $this->assertSame("PP-{$job->id}", $sync->request_payload['ref']);
         $this->assertNotNull($job->customer->fresh()->odoo_partner_id);
+    }
+
+    public function test_outside_tolerance_bills_produced_quantity_at_the_quoted_unit_price(): void
+    {
+        $this->seed();
+        $job = $this->completedJob(['produced_quantity' => 6000]); // +20% → pro-rata
+
+        $line = app(OdooInvoiceService::class)->payload($job)['invoice_line_ids'][0][2];
+
+        $this->assertSame(6000, $line['quantity']);
+        $this->assertEquals(2.4, $line['price_unit']); // 12000 / 5000
     }
 
     public function test_transient_failure_is_logged_and_rethrown_for_retry(): void

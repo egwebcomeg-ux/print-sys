@@ -49,6 +49,12 @@ class BoxPricer
         $nestAllowed = $input['interlockEnabled'] && $pitch !== null && ! $usingDie;
         $spoilage = 1 + $pricing['spoilageRate'];
         $pricePerTon = (float) $price->price_per_ton_egp;
+        $colors = (int) $input['printColors'];
+        $lamination = Lamination::from($input['lamination']);
+        // Machine work is charged per cut sheet fed, so it belongs in the plan comparison too.
+        $machineCostPerCutSheet = ($colors > 0 ? $colors * $pricing['pressRunRatePerColorPer1000SheetsEgp'] / 1000 : 0)
+            + ($lamination === Lamination::None ? 0 : $pricing['laminationRatePerSheetEgp'][$lamination->value])
+            + $pricing['dieCutRatePerSheetEgp'];
 
         $type = $grammage->paperType;
         $paperSheet = [$type->sheet_width_cm, $type->sheet_height_cm];
@@ -96,7 +102,8 @@ class BoxPricer
                     }
                     $perRaw = $c['ups'] * self::denominator($fraction);
                     $sheetsNeeded = (int) ceil((($quantity * $pieces) / $perRaw) * $spoilage);
-                    $c['cost'] = $sheetsNeeded * self::sheetCost($sheet, $grammage->gsm, $pricePerTon);
+                    $c['cost'] = $sheetsNeeded * self::sheetCost($sheet, $grammage->gsm, $pricePerTon)
+                        + $sheetsNeeded * self::denominator($fraction) * $machineCostPerCutSheet;
                     $c['sheetsNeeded'] = $sheetsNeeded;
                     $candidates[] = $c;
                 }
@@ -117,18 +124,17 @@ class BoxPricer
         }
 
         $rawSheetsNeeded = (int) ceil((($quantity * $pieces) / $upsPerRawSheet) * $spoilage);
+        // Press, laminator and die-cutter rates are per sheet fed, i.e. per cut sheet.
+        $cutSheetsRun = $rawSheetsNeeded * self::denominator($plan['fraction']);
         $paperCostPerSheet = self::sheetCost($plan['sheet'], $grammage->gsm, $pricePerTon);
-
-        $colors = (int) $input['printColors'];
-        $lamination = Lamination::from($input['lamination']);
 
         $breakdown = [
             'paperCost' => $rawSheetsNeeded * $paperCostPerSheet,
             'platesCost' => $colors > 0 ? $colors * $pricing['plateCostPerColorEgp'] : 0,
-            'pressRunCost' => $colors > 0 ? $colors * $pricing['pressRunRatePerColorPer1000SheetsEgp'] * ($rawSheetsNeeded / 1000) : 0,
-            'laminationCost' => $lamination === Lamination::None ? 0 : $rawSheetsNeeded * $pricing['laminationRatePerSheetEgp'][$lamination->value],
+            'pressRunCost' => $colors > 0 ? $colors * $pricing['pressRunRatePerColorPer1000SheetsEgp'] * ($cutSheetsRun / 1000) : 0,
+            'laminationCost' => $lamination === Lamination::None ? 0 : $cutSheetsRun * $pricing['laminationRatePerSheetEgp'][$lamination->value],
             'dieToolingCost' => $input['isUsingExistingDie'] ? 0 : $pricing['newDieCostEgp'],
-            'dieCuttingRunCost' => $rawSheetsNeeded * $pricing['dieCutRatePerSheetEgp'],
+            'dieCuttingRunCost' => $cutSheetsRun * $pricing['dieCutRatePerSheetEgp'],
             'gluingCost' => $quantity * $pricing['glueFoldRatePerUnitEgp'],
         ];
 

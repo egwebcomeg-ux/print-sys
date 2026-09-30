@@ -89,23 +89,34 @@ export default function PrintQuote({
 
             <main className="mx-auto max-w-[190mm] px-6 py-8 print:px-0 print:py-0">
                 <header className="flex items-start justify-between gap-6 border-b-2 border-slate-900 pb-5">
-                    <div>
-                        <h1 className="text-2xl font-bold">{company.name}</h1>
-                        <div className="mt-1 space-y-0.5 text-sm text-slate-600">
-                            {company.address && <div>{company.address}</div>}
-                            {company.phone && (
-                                <div dir="ltr" className="text-right">
-                                    {company.phone}
-                                </div>
-                            )}
-                            {company.email && (
-                                <div dir="ltr" className="text-right">
-                                    {company.email}
-                                </div>
-                            )}
-                            {company.taxId && (
-                                <div>س.ت / ب.ض: {company.taxId}</div>
-                            )}
+                    <div className="flex items-start gap-4">
+                        <img
+                            src="/images/logo.png"
+                            alt=""
+                            className="size-20 shrink-0 object-contain"
+                        />
+                        <div>
+                            <h1 className="text-2xl font-bold">
+                                {company.name}
+                            </h1>
+                            <div className="mt-1 space-y-0.5 text-sm text-slate-600">
+                                {company.address && (
+                                    <div>{company.address}</div>
+                                )}
+                                {company.phone && (
+                                    <div dir="ltr" className="text-right">
+                                        {company.phone}
+                                    </div>
+                                )}
+                                {company.email && (
+                                    <div dir="ltr" className="text-right">
+                                        {company.email}
+                                    </div>
+                                )}
+                                {company.taxId && (
+                                    <div>س.ت / ب.ض: {company.taxId}</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="text-left">

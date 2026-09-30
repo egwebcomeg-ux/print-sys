@@ -155,6 +155,7 @@ class CatalogCrudTest extends TestCase
             'die_cut_rate_per_sheet_egp' => 0.2,
             'glue_fold_rate_per_unit_egp' => 0.06,
             'default_margin_percent' => 25,
+            'billing_tolerance_percent' => 5,
         ])->assertRedirect();
 
         $constants = Settings::pricingConstants();

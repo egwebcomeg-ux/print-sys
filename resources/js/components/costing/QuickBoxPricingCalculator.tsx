@@ -872,6 +872,11 @@ export default function QuickBoxPricingCalculator({
     const paperSheet = selectedPaperType?.standardSheetSize ?? RAW_SHEET_OPTIONS[0];
     const pricePerTon = selectedSupplierPrice?.pricePerTonEgp ?? 0;
     const spoilage = 1 + pricing.spoilageRate;
+    // Machine work is charged per cut sheet fed, so it belongs in the plan comparison too.
+    const machineCostPerCutSheet =
+      (printColors > 0 ? printColors * pricing.pressRunRatePerColorPer1000SheetsEgp / 1000 : 0) +
+      (lamination !== 'none' ? pricing.laminationRatePerSheetEgp[lamination] : 0) +
+      pricing.dieCutRatePerSheetEgp;
     let plan: ReturnType<typeof evaluateCut>;
     if (isUsingExistingDie && selectedDie) {
       plan = evaluateCut(paperSheet, selectedDie.cutFraction);
@@ -884,7 +889,9 @@ export default function QuickBoxPricingCalculator({
         .map((c) => {
           const perRaw = c.ups * CUT_FRACTION_DENOMINATOR[c.fraction];
           const sheetsNeeded = Math.ceil(((quantity * piecesPerBox) / perRaw) * spoilage);
-          const cost = sheetsNeeded * (selectedGrammage ? paperCostPerSheetEgp(c.sheet, selectedGrammage, pricePerTon) : 0);
+          const cost =
+            sheetsNeeded * (selectedGrammage ? paperCostPerSheetEgp(c.sheet, selectedGrammage, pricePerTon) : 0) +
+            sheetsNeeded * CUT_FRACTION_DENOMINATOR[c.fraction] * machineCostPerCutSheet;
           return { c, cost, sheetsNeeded };
         })
         .sort((a, b) => a.cost - b.cost || a.sheetsNeeded - b.sheetsNeeded || CUT_FRACTION_DENOMINATOR[a.c.fraction] - CUT_FRACTION_DENOMINATOR[b.c.fraction]);
@@ -942,11 +949,13 @@ export default function QuickBoxPricingCalculator({
         : 0;
     const paperCost = rawSheetsNeeded * paperCostPerSheet;
     const platesCost = printColors > 0 ? printColors * pricing.plateCostPerColorEgp : 0;
+    // Press, laminator and die-cutter rates are per sheet FED, i.e. per cut sheet.
+    const cutSheetsRun = rawSheetsNeeded * cutSheetsPerRawSheet;
     const pressRunCost =
-      printColors > 0 ? printColors * pricing.pressRunRatePerColorPer1000SheetsEgp * (rawSheetsNeeded / 1000) : 0;
-    const laminationCost = lamination !== 'none' ? rawSheetsNeeded * pricing.laminationRatePerSheetEgp[lamination] : 0;
+      printColors > 0 ? printColors * pricing.pressRunRatePerColorPer1000SheetsEgp * (cutSheetsRun / 1000) : 0;
+    const laminationCost = lamination !== 'none' ? cutSheetsRun * pricing.laminationRatePerSheetEgp[lamination] : 0;
     const dieToolingCost = isUsingExistingDie ? 0 : pricing.newDieCostEgp;
-    const dieCuttingRunCost = rawSheetsNeeded * pricing.dieCutRatePerSheetEgp;
+    const dieCuttingRunCost = cutSheetsRun * pricing.dieCutRatePerSheetEgp;
     const gluingCost = quantity * pricing.glueFoldRatePerUnitEgp;
 
     const baseCost = paperCost + platesCost + pressRunCost + laminationCost + dieToolingCost + dieCuttingRunCost + gluingCost;
@@ -1599,7 +1608,7 @@ export default function QuickBoxPricingCalculator({
                   onClick={handlePriceWithoutNewDie}
                   className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-100 text-sm py-2.5 transition-colors"
                 >
-                  تسعير بدون اسطمبه (توفير التكلفة)
+                  استخدم أقرب اسطمبة موجودة (توفير تكلفة الاسطمبة)
                 </button>
               </div>
             </div>

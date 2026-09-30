@@ -88,14 +88,17 @@ class CreateBoxJobTest extends TestCase
 
         // Worked example: 70×100 @ 300 gsm @ 14,000/ton = 2.94/sheet.
         // Half sheet usable 690×488: grid 12 ups, interlocked 14 → 14 × 2 = 28 per raw sheet.
-        // ⌈3000/28 × 1.03⌉ = 111 sheets → paper 326.34 + plates 300 + press 39.96
-        // + matte 38.85 + new die 650 + die-cut 16.65 + glue 150 = 1521.80.
+        // The plan picks the FULL 70×100 sheet (2 cols × 14 nested rows = 28, same paper as
+        // the half sheet but half the machine passes): ⌈3000/28 × 1.03⌉ = 111 sheets →
+        // paper 326.34 + plates 300 + press 2×180×0.111 = 39.96 + matte 111×0.35 = 38.85
+        // + new die 650 + die-cut 111×0.15 = 16.65 + glue 150 = 1521.80.
         $this->assertSame(111, $job->raw_sheets_needed);
         $this->assertSame(28, $job->ups_per_raw_sheet);
         $this->assertTrue($job->interlocked);
+        $this->assertSame('1/1', $job->quote_snapshot['pricing']['cutFraction']);
         $this->assertEquals(1521.80, (float) $job->base_cost_egp);
         $this->assertEquals(20, (float) $job->margin_percent);
-        $this->assertEquals(1830.00, (float) $job->final_price_egp); // unit 0.61 × 3000
+        $this->assertEquals(1830.00, (float) $job->final_price_egp); // 1826.16 / 3000 → unit 0.61 × 3000
         $this->assertSame(7, $job->costLines()->count());
         $this->assertEquals(1521.80, (float) $job->costLines()->sum('amount_egp'));
         $this->assertSame('medicine', $job->quote_snapshot['boxType']);
