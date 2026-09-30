@@ -57,6 +57,7 @@ export default function CustomersIndex({
                         <Th>الاسم</Th>
                         <Th>التليفون</Th>
                         <Th>الإيميل</Th>
+                        <Th>المستحق</Th>
                         <Th>حد الائتمان</Th>
                         <Th>الشغلانات</Th>
                         <Th />
@@ -64,7 +65,7 @@ export default function CustomersIndex({
                 </thead>
                 <tbody>
                     {customers.data.length === 0 && (
-                        <EmptyRow colSpan={6}>
+                        <EmptyRow colSpan={7}>
                             <div className="space-y-3">
                                 <p>مفيش عملاء لسه.</p>
                                 {can('manage-customers') && (
@@ -81,9 +82,27 @@ export default function CustomersIndex({
                     )}
                     {customers.data.map((customer) => (
                         <tr key={customer.id}>
-                            <Td className="font-medium">{customer.name}</Td>
+                            <Td className="font-medium">
+                                <Link
+                                    href={CustomerController.show(customer.id)}
+                                    className="hover:text-emerald-400"
+                                >
+                                    {customer.name}
+                                </Link>
+                            </Td>
                             <Td dir="ltr">{customer.phone ?? '—'}</Td>
                             <Td>{customer.email ?? '—'}</Td>
+                            <Td
+                                className={
+                                    (customer.balance ?? 0) > 0
+                                        ? 'text-red-400'
+                                        : undefined
+                                }
+                            >
+                                {(customer.balance ?? 0) > 0
+                                    ? egp(customer.balance)
+                                    : '—'}
+                            </Td>
                             <Td>{egp(customer.credit_limit_egp)}</Td>
                             <Td>{customer.jobs_count}</Td>
                             <Td className="text-left whitespace-nowrap">

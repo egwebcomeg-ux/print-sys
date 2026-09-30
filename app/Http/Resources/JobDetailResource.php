@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\JobStatus;
 use App\Enums\JobType;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Jobs\JobEditController;
 use App\Models\ActivityLog;
 use App\Models\Job;
@@ -13,7 +14,9 @@ use App\Models\JobPressAssignment;
 use App\Models\JobStage;
 use App\Models\OdooInvoiceSync;
 use App\Models\PaperPriceChange;
+use App\Models\Payment;
 use App\Services\Jobs\JobLifecycleService;
+use App\Support\CustomerBalance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -47,6 +50,17 @@ class JobDetailResource extends JsonResource
             'customer' => $this->customer->only(['id', 'name', 'phone', 'email']),
             'editable' => JobEditController::editable($this->resource) && (bool) $request->user()?->can('create-jobs'),
             'warnings' => $this->warnings(),
+            'payments' => [
+                'items' => $this->payments()->get()->map(fn (Payment $p) => [
+                    'id' => $p->id,
+                    'amount' => (float) $p->amount_egp,
+                    'method' => $p->method->label(),
+                    'paidAt' => $p->paid_at->toDateString(),
+                    'reference' => $p->reference,
+                ]),
+                'total' => (float) $this->payments()->sum('amount_egp'),
+                'methods' => PaymentMethod::options(),
+            ],
             'activity' => ActivityLog::query()->with('user:id,name')
                 ->where('subject_type', 'job')->where('subject_id', $this->id)
                 ->latest('id')->limit(30)->get()
@@ -148,20 +162,23 @@ class JobDetailResource extends JsonResource
     private function warnings(): array
     {
         $warnings = [];
-        $open = in_array($this->status, [JobStatus::Draft, JobStatus::Quoted], true);
 
-        // Credit limit: open (not yet invoiced) work for this customer, this job included.
+        // Credit limit: what the customer already owes + open (not yet invoiced) work, this job included.
         $limit = $this->customer->credit_limit_egp;
         if ($limit !== null && $this->status !== JobStatus::Invoiced) {
-            $exposure = (float) Job::query()
+            $owed = max(0, CustomerBalance::forCustomer($this->customer_id)['balance']);
+            $open = (float) Job::query()
                 ->where('customer_id', $this->customer_id)
                 ->whereIn('status', [JobStatus::Approved, JobStatus::InProduction, JobStatus::Completed])
                 ->whereKeyNot($this->id)
                 ->sum('final_price_egp') + (float) $this->final_price_egp;
+            $exposure = $owed + $open;
             if ($exposure > (float) $limit) {
-                $warnings[] = ['type' => 'credit', 'message' => sprintf('شغل العميل المفتوح (%s ج) بيعدّي حد الائتمان (%s ج)', number_format($exposure, 2), number_format((float) $limit, 2))];
+                $warnings[] = ['type' => 'credit', 'message' => sprintf('مستحقات العميل (%s ج) + شغله المفتوح (%s ج) بيعدّوا حد الائتمان (%s ج)', number_format($owed, 2), number_format($open, 2), number_format((float) $limit, 2))];
             }
         }
+
+        $open = in_array($this->status, [JobStatus::Draft, JobStatus::Quoted], true);
 
         // Paper price moved since this quote was priced.
         if ($open) {

@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers\Catalog;
 
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Job;
+use App\Models\Payment;
+use App\Support\CustomerBalance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,9 +28,43 @@ class CustomerController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        $balances = CustomerBalance::for($customers->getCollection()->map(fn (Customer $c): int => $c->id)->all());
+        $customers->through(fn (Customer $c) => [...$c->toArray(), 'balance' => $balances[$c->id]['balance'] ?? 0]);
+
         return Inertia::render('customers/index', [
             'customers' => $customers,
             'filters' => ['search' => $search],
+        ]);
+    }
+
+    /** Customer account: balance, jobs and payments. */
+    public function show(Customer $customer): Response
+    {
+        $customer->load(['payments.user:id,name', 'payments.job:id,title,box_type,length_cm,width_cm,depth_cm,job_type']);
+
+        return Inertia::render('customers/show', [
+            'customer' => $customer->only(['id', 'name', 'phone', 'email', 'credit_limit_egp', 'notes']),
+            'balance' => CustomerBalance::forCustomer($customer->id),
+            'jobs' => $customer->jobs()->latest('id')->get()->map(fn (Job $j) => [
+                'id' => $j->id,
+                'name' => $j->displayName(),
+                'status' => $j->status->value,
+                'statusLabel' => $j->status->label(),
+                'finalPrice' => (float) $j->final_price_egp,
+                'paid' => (float) $j->payments()->sum('amount_egp'),
+                'createdAt' => $j->created_at?->toIso8601String(),
+            ]),
+            'payments' => $customer->payments->map(fn (Payment $p) => [
+                'id' => $p->id,
+                'amount' => (float) $p->amount_egp,
+                'method' => $p->method->label(),
+                'paidAt' => $p->paid_at->toDateString(),
+                'reference' => $p->reference,
+                'notes' => $p->notes,
+                'job' => $p->job ? ['id' => $p->job->id, 'name' => $p->job->displayName()] : null,
+                'by' => $p->user?->name,
+            ]),
+            'methods' => PaymentMethod::options(),
         ]);
     }
 

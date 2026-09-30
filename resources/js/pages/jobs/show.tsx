@@ -14,6 +14,7 @@ import { useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import PressController from '@/actions/App/Http/Controllers/Catalog/PressController';
 import JobCompletionController from '@/actions/App/Http/Controllers/Jobs/JobCompletionController';
+import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
 import JobEditController from '@/actions/App/Http/Controllers/Jobs/JobEditController';
 import JobPressAssignmentController from '@/actions/App/Http/Controllers/Jobs/JobPressAssignmentController';
@@ -25,6 +26,7 @@ import OdooInvoiceSyncController from '@/actions/App/Http/Controllers/Jobs/OdooI
 import { DataTable, EmptyRow, Td, Th } from '@/components/crud/data-table';
 import { PageBody, PageHeader } from '@/components/crud/page-header';
 import { JobStatusBadge } from '@/components/jobs/status-badge';
+import { PaymentForm } from '@/components/payments/payment-form';
 import PressRoutingSelector from '@/components/routing/PressRoutingSelector';
 import type {
     JobRoutingRequirements,
@@ -66,6 +68,17 @@ type JobDetail = {
         user: string;
         at: string | null;
     }[];
+    payments: {
+        items: {
+            id: number;
+            amount: number;
+            method: string;
+            paidAt: string;
+            reference: string | null;
+        }[];
+        total: number;
+        methods: Option[];
+    };
     customer: {
         id: number;
         name: string;
@@ -259,6 +272,49 @@ export default function JobShow({
                 job.status === 'invoiced' ||
                 job.odoo.syncs.length > 0) && (
                 <Invoicing job={job} canManage={can('manage-invoicing')} />
+            )}
+
+            {(job.payments.items.length > 0 || can('manage-invoicing')) && (
+                <section className="mt-6">
+                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                        <h2 className="text-base font-semibold">
+                            الدفعات على الشغلانة
+                        </h2>
+                        <span className="text-sm text-muted-foreground">
+                            اتدفع {egp(job.payments.total)} من{' '}
+                            {egp(job.finalPrice)} (قبل الضريبة) ·{' '}
+                            <Link
+                                href={CustomerController.show(job.customer.id)}
+                                className="text-emerald-400 hover:underline"
+                            >
+                                حساب العميل
+                            </Link>
+                        </span>
+                    </div>
+                    {job.payments.items.length > 0 && (
+                        <ul className="mb-3 space-y-1 text-sm">
+                            {job.payments.items.map((p) => (
+                                <li key={p.id}>
+                                    <span dir="ltr">{p.paidAt}</span> —{' '}
+                                    {egp(p.amount)} ({p.method})
+                                    {p.reference && (
+                                        <span className="text-muted-foreground">
+                                            {' '}
+                                            · {p.reference}
+                                        </span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {can('manage-invoicing') && (
+                        <PaymentForm
+                            customerId={job.customer.id}
+                            methods={job.payments.methods}
+                            jobId={job.id}
+                        />
+                    )}
+                </section>
             )}
 
             {job.activity.length > 0 && (

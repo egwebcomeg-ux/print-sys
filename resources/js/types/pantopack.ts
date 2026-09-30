@@ -39,6 +39,8 @@ export type Customer = {
     credit_limit_egp: string | null;
     notes: string | null;
     jobs_count?: number;
+    /** Positive = owed to us (see CustomerBalance). */
+    balance?: number;
 };
 
 export type JobStatus =

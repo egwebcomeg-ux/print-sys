@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\JobStatus;
 use App\Enums\LeadStatus;
 use App\Enums\OdooSyncStatus;
+use App\Models\Customer;
 use App\Models\CuttingDie;
 use App\Models\Job;
 use App\Models\Lead;
 use App\Models\OdooInvoiceSync;
+use App\Support\CustomerBalance;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,6 +43,8 @@ class DashboardController extends Controller
                 ->whereNotNull('estimated_lifespan_jobs')
                 ->whereRaw('jobs_run_count >= estimated_lifespan_jobs * 0.9')
                 ->count(),
+            // Total still owed by customers (positive balances only).
+            'receivables' => round(collect(CustomerBalance::for(Customer::query()->get(['id'])->map(fn (Customer $c): int => $c->id)->all()))->sum(fn ($b) => max(0, $b['balance'])), 2),
             'inProduction' => (int) ($counts[JobStatus::InProduction->value] ?? 0) + (int) ($counts[JobStatus::Approved->value] ?? 0),
             'recentJobs' => Job::query()->with('customer:id,name')->latest('id')->limit(8)->get()->map(fn (Job $job) => [
                 'id' => $job->id,

@@ -39,6 +39,12 @@ class Customer extends Model
         return $this->hasMany(Job::class);
     }
 
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->latest('paid_at')->latest('id');
+    }
+
     /** @return HasMany<Lead, $this> */
     public function leads(): HasMany
     {

@@ -25,6 +25,7 @@ use App\Http\Controllers\Jobs\OdooInvoiceSyncController;
 use App\Http\Controllers\Jobs\WorkOrderController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductionBoardController;
 use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // --- Customers ---------------------------------------------------------
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::get('customers/{customer}', [CustomerController::class, 'show'])->whereNumber('customer')->name('customers.show');
+    Route::middleware('can:manage-invoicing')->group(function () {
+        Route::post('customers/{customer}/payments', [PaymentController::class, 'store'])->name('customers.payments.store');
+        Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+    });
     Route::middleware('can:manage-customers')->group(function () {
         Route::resource('customers', CustomerController::class)->except(['index', 'show']);
     });

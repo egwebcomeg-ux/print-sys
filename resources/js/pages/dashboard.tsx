@@ -1,5 +1,13 @@
 import { Head, Link } from '@inertiajs/react';
-import { AlertTriangle, Box, Factory, FileText, Users } from 'lucide-react';
+import {
+    AlertTriangle,
+    Box,
+    Factory,
+    FileText,
+    Users,
+    Wallet,
+} from 'lucide-react';
+import CustomerController from '@/actions/App/Http/Controllers/Catalog/CustomerController';
 import CuttingDieController from '@/actions/App/Http/Controllers/Catalog/CuttingDieController';
 import BoxJobController from '@/actions/App/Http/Controllers/Jobs/BoxJobController';
 import JobController from '@/actions/App/Http/Controllers/Jobs/JobController';
@@ -22,6 +30,7 @@ export default function Dashboard({
     diesNeedingAttention,
     diesNearEndOfLife,
     inProduction,
+    receivables,
     recentJobs,
 }: {
     statusCounts: { value: JobStatus; label: string; count: number }[];
@@ -30,6 +39,7 @@ export default function Dashboard({
     diesNeedingAttention: number;
     diesNearEndOfLife: number;
     inProduction: number;
+    receivables: number;
     recentJobs: {
         id: number;
         name: string;
@@ -119,6 +129,23 @@ export default function Dashboard({
                         </Link>
                     )}
                 </div>
+            )}
+
+            {can('manage-invoicing') && receivables > 0 && (
+                <Link
+                    href={CustomerController.index()}
+                    className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-emerald-500/40"
+                >
+                    <Wallet className="size-6 text-amber-400" />
+                    <div>
+                        <div className="font-medium">
+                            مستحقات عند العملاء: {egp(receivables)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            اللي اتفوتر (شامل الضريبة) ولسه متدفعش
+                        </div>
+                    </div>
+                </Link>
             )}
 
             <Link

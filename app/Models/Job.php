@@ -145,6 +145,12 @@ class Job extends Model
         return $this->hasOne(JobPressAssignment::class)->latestOfMany();
     }
 
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->latest('paid_at');
+    }
+
     /** @return HasMany<OdooInvoiceSync, $this> */
     public function odooSyncs(): HasMany
     {
