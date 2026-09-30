@@ -26,15 +26,7 @@ class CreateManualJob
     public function handle(array $quote, ?Job $existing = null): Job
     {
         $items = $this->priceLineItems($quote['lineItems']);
-
-        // Free-form extra costs; zero lines are dropped, unnamed ones get a generic label.
-        $costLines = collect($quote['costLines'])
-            ->map(fn ($line) => [
-                'label' => trim((string) ($line['label'] ?? '')) ?: 'مصاريف',
-                'amount_egp' => round((float) $line['amountEgp'], 2),
-            ])
-            ->filter(fn ($line) => $line['amount_egp'] > 0)
-            ->values();
+        $costLines = self::costLines($quote['costLines']);
 
         // Same rounding order as the component: raw sums, round only the results.
         $paperCost = $items->sum('raw_cost');
@@ -84,8 +76,8 @@ class CreateManualJob
     }
 
     /**
-     * @param  list<array<string, mixed>>  $lineItems
-     * @return Collection<int, array<string, mixed>>
+     * @param  list<array{label: string, paperTypeId: int|string, grammageId: int|string, supplierPriceId?: int|string|null, sheetWidthCm: float|int|string, sheetHeightCm: float|int|string, sheetsCount: int|string}>  $lineItems
+     * @return Collection<int, array{label: string, paper_grammage_id: int, paper_grammage_price_id: int, sheet_width_cm: float|int|string, sheet_height_cm: float|int|string, sheets_count: int|string, weight_kg: float, cost_egp: float, raw_cost: float, sort_order: int}>
      */
     private function priceLineItems(array $lineItems)
     {
@@ -137,5 +129,22 @@ class CreateManualJob
         $areaM2 = ($widthCm / 100) * ($heightCm / 100);
 
         return ($areaM2 * $gsm / 1000) * $sheets;
+    }
+
+    /**
+     * Free-form extra costs; zero lines are dropped, unnamed ones get a generic label.
+     *
+     * @param  list<array{label?: string|null, amountEgp: float|int|string}>  $lines
+     * @return Collection<int, array{label: string, amount_egp: float}>
+     */
+    private static function costLines(array $lines): Collection
+    {
+        return collect($lines)
+            ->map(fn ($line) => [
+                'label' => trim((string) ($line['label'] ?? '')) ?: 'مصاريف',
+                'amount_egp' => round((float) $line['amountEgp'], 2),
+            ])
+            ->filter(fn ($line) => $line['amount_egp'] > 0)
+            ->values();
     }
 }

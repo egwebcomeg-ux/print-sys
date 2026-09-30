@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Jobs;
 
 use App\Http\Controllers\Jobs\JobEditController;
+use App\Models\Job;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -19,7 +20,7 @@ class StoreManualJobRequest extends FormRequest
         // On the update route, the job must still be editable (draft/quoted).
         $job = $this->route('job');
 
-        return $this->user()->can('create-jobs') && ($job === null || JobEditController::editable($job));
+        return $this->user()->can('create-jobs') && (! $job instanceof Job || JobEditController::editable($job));
     }
 
     /** @return array<string, mixed> */
@@ -61,7 +62,7 @@ class StoreManualJobRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // The calculator uses '' for "no price picked" — treat it as null.
-        $items = collect($this->input('lineItems', []))->map(function ($item) {
+        $items = collect($this->array('lineItems'))->map(function ($item) {
             if (is_array($item) && ($item['supplierPriceId'] ?? null) === '') {
                 $item['supplierPriceId'] = null;
             }

@@ -17,9 +17,10 @@ class BackupDatabase extends Command
 {
     public function handle(): int
     {
-        $config = config('database.connections.'.config('database.default'));
+        $connection = 'database.connections.'.config('database.default');
+        $db = fn (string $key): string => (string) config("{$connection}.{$key}");
 
-        if (! in_array($config['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+        if (! in_array($db('driver'), ['mysql', 'mariadb'], true)) {
             $this->error('backup:database supports MySQL/MariaDB only.');
 
             return self::FAILURE;
@@ -30,20 +31,20 @@ class BackupDatabase extends Command
             mkdir($dir, 0755, true);
         }
 
-        $file = $dir.DIRECTORY_SEPARATOR.$config['database'].'-'.now()->format('Y-m-d_His').'.sql';
+        $file = $dir.DIRECTORY_SEPARATOR.$db('database').'-'.now()->format('Y-m-d_His').'.sql';
 
         $process = new Process([
-            env('MYSQLDUMP_PATH', 'mysqldump'),
-            '--host='.$config['host'],
-            '--port='.$config['port'],
-            '--user='.$config['username'],
+            (string) config('pantopack.mysqldump_path'),
+            '--host='.$db('host'),
+            '--port='.$db('port'),
+            '--user='.$db('username'),
             '--single-transaction',
             '--quick',
             '--routines',
             '--default-character-set=utf8mb4',
             '--result-file='.$file,
-            $config['database'],
-        ], env: ['MYSQL_PWD' => (string) $config['password']]); // keeps the password off the process list
+            $db('database'),
+        ], env: ['MYSQL_PWD' => $db('password')]); // keeps the password off the process list
         $process->setTimeout(600)->run();
 
         if (! $process->isSuccessful() || ! is_file($file) || filesize($file) === 0) {

@@ -64,7 +64,7 @@ class ReportsController extends Controller
                     'new' => (float) $c->new_price_egp,
                     'changePercent' => $c->old_price_egp ? round(((float) $c->new_price_egp - (float) $c->old_price_egp) / (float) $c->old_price_egp * 100, 1) : null,
                     'by' => $c->user?->name,
-                    'at' => $c->created_at?->toIso8601String(),
+                    'at' => $c->created_at->toIso8601String(),
                 ]),
         ]);
     }
@@ -73,7 +73,7 @@ class ReportsController extends Controller
      * Over/under-run per press over the last 6 months of completed jobs:
      * (produced - quoted) / quoted. Negative = short (waste beyond spoilage).
      *
-     * @return list<array<string, mixed>>
+     * @return array<int, array<string, mixed>>
      */
     private function wasteByPress(): array
     {

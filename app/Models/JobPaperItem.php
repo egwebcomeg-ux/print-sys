@@ -2,10 +2,26 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $job_id
+ * @property string $label
+ * @property int $paper_grammage_id
+ * @property int|null $paper_grammage_price_id
+ * @property string $sheet_width_cm
+ * @property string $sheet_height_cm
+ * @property int $sheets_count
+ * @property string $weight_kg
+ * @property string $cost_egp
+ * @property int $sort_order
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable([
     'job_id', 'label', 'paper_grammage_id', 'paper_grammage_price_id', 'sheet_width_cm',
     'sheet_height_cm', 'sheets_count', 'weight_kg', 'cost_egp', 'sort_order',

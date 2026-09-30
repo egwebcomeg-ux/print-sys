@@ -81,7 +81,11 @@ class OdooInvoiceService
         return $sync;
     }
 
-    /** Untaxed line total of an account.move payload (qty × unit price, 2 dp). */
+    /**
+     * Untaxed line total of an account.move payload (qty × unit price, 2 dp).
+     *
+     * @param  array<string, mixed>  $payload
+     */
     public static function billedTotal(array $payload): float
     {
         $total = 0.0;

@@ -26,7 +26,11 @@ class BoxPricer
 
     private const SIDE_TRIM_MM = 5;
 
-    /** Standard raw sheets the plan may choose from (RAW_SHEET_OPTIONS in the TSX). */
+    /**
+     * Standard raw sheets the plan may choose from (RAW_SHEET_OPTIONS in the TSX), cm.
+     *
+     * @var list<array{0: int, 1: int}>
+     */
     private const STANDARD_SHEETS = [[70, 100], [88, 119]];
 
     /**
@@ -59,31 +63,10 @@ class BoxPricer
         $type = $grammage->paperType;
         $paperSheet = [$type->sheet_width_cm, $type->sheet_height_cm];
 
-        $evaluate = function (array $sheet, CutFraction $fraction) use ($flatW, $flatH, $pitch, $nestAllowed, $pieces): array {
-            $cut = self::cutSheetDimsMm($sheet[0], $sheet[1], $fraction);
-            $usableW = $cut['w'] - 2 * self::SIDE_TRIM_MM;
-            $usableH = $cut['h'] - self::GRIPPER_ALLOWANCE_MM;
-            $grid = self::upsGrid($usableW, $usableH, $flatW, $flatH);
-            $nestUps = 0;
-            if ($nestAllowed) {
-                $cols = max(0, (int) floor($usableW / $flatW));
-                $rows = $usableH >= $flatH ? (int) floor(($usableH - $flatH) / $pitch) + 1 : 0;
-                $nestUps = $cols * $rows;
-            }
-            $nested = $nestUps > $grid;
-            $raw = $nested ? $nestUps : $grid;
-
-            return [
-                'sheet' => $sheet,
-                'fraction' => $fraction,
-                'nested' => $nested,
-                // Multi-piece boxes need whole sets per sheet.
-                'ups' => intdiv($raw, $pieces) * $pieces,
-            ];
-        };
+        $nestPitch = $nestAllowed ? $pitch : null;
 
         if ($usingDie) {
-            $plan = $evaluate($paperSheet, $die->cut_fraction);
+            $plan = self::evaluateSheet($paperSheet, $die->cut_fraction, $flatW, $flatH, $nestPitch, $pieces);
             $upsPerCutSheet = $die->ups_on_cut_sheet;
             $plan['nested'] = false;
         } else {
@@ -96,16 +79,18 @@ class BoxPricer
             $candidates = [];
             foreach ($sheets as $sheet) {
                 foreach ([CutFraction::Full, CutFraction::Half, CutFraction::Quarter] as $fraction) {
-                    $c = $evaluate($sheet, $fraction);
+                    $c = self::evaluateSheet($sheet, $fraction, $flatW, $flatH, $nestPitch, $pieces);
                     if ($c['ups'] === 0) {
                         continue;
                     }
                     $perRaw = $c['ups'] * self::denominator($fraction);
                     $sheetsNeeded = (int) ceil((($quantity * $pieces) / $perRaw) * $spoilage);
-                    $c['cost'] = $sheetsNeeded * self::sheetCost($sheet, $grammage->gsm, $pricePerTon)
-                        + $sheetsNeeded * self::denominator($fraction) * $machineCostPerCutSheet;
-                    $c['sheetsNeeded'] = $sheetsNeeded;
-                    $candidates[] = $c;
+                    $candidates[] = [
+                        ...$c,
+                        'cost' => $sheetsNeeded * self::sheetCost($sheet, $grammage->gsm, $pricePerTon)
+                            + $sheetsNeeded * self::denominator($fraction) * $machineCostPerCutSheet,
+                        'sheetsNeeded' => $sheetsNeeded,
+                    ];
                 }
             }
             if ($candidates === []) {
@@ -160,6 +145,37 @@ class BoxPricer
             'marginAmountEgp' => round($marginAmount, 2),
             'unitPriceEgp' => $unitPrice,
             'totalPriceEgp' => $totalPrice,
+        ];
+    }
+
+    /**
+     * Ups on one cut of a sheet: plain grid vs nested rows (nesting only when it wins).
+     * Multi-piece boxes need whole sets (lid + base) per sheet.
+     *
+     * @param  array{0: int, 1: int}  $sheet  width × height in cm
+     * @param  float|null  $pitch  nested row pitch, or null when nesting isn't allowed
+     * @return array{sheet: array{0: int, 1: int}, fraction: CutFraction, nested: bool, ups: int}
+     */
+    private static function evaluateSheet(array $sheet, CutFraction $fraction, float $flatW, float $flatH, ?float $pitch, int $pieces): array
+    {
+        $cut = self::cutSheetDimsMm($sheet[0], $sheet[1], $fraction);
+        $usableW = $cut['w'] - 2 * self::SIDE_TRIM_MM;
+        $usableH = $cut['h'] - self::GRIPPER_ALLOWANCE_MM;
+        $grid = self::upsGrid($usableW, $usableH, $flatW, $flatH);
+        $nestUps = 0;
+        if ($pitch !== null) {
+            $cols = max(0, (int) floor($usableW / $flatW));
+            $rows = $usableH >= $flatH ? (int) floor(($usableH - $flatH) / $pitch) + 1 : 0;
+            $nestUps = $cols * $rows;
+        }
+        $nested = $nestUps > $grid;
+        $raw = $nested ? $nestUps : $grid;
+
+        return [
+            'sheet' => $sheet,
+            'fraction' => $fraction,
+            'nested' => $nested,
+            'ups' => intdiv($raw, $pieces) * $pieces,
         ];
     }
 

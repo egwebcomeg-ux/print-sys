@@ -22,8 +22,8 @@ class ActivityLogController extends Controller
                     'subjectId' => $a->subject_id,
                     'action' => $a->action,
                     'description' => $a->description,
-                    'user' => $a->user?->name ?? 'السيستم',
-                    'at' => $a->created_at?->toIso8601String(),
+                    'user' => $a->user->name ?? 'السيستم',
+                    'at' => $a->created_at->toIso8601String(),
                 ]),
         ]);
     }

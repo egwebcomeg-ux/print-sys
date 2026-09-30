@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Catalog;
 
 use App\Enums\PaperCategory;
 use App\Http\Controllers\Controller;
+use App\Models\PaperGrammage;
+use App\Models\PaperGrammagePrice;
 use App\Models\PaperSupplier;
 use App\Models\PaperType;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +28,7 @@ class PaperTypeController extends Controller
                 'category' => $type->category,
                 'categoryLabel' => $type->category->label(),
                 'sheetSize' => "{$type->sheet_width_cm}×{$type->sheet_height_cm}",
-                'grammages' => $type->grammages->map(fn ($g) => [
+                'grammages' => $type->grammages->map(fn (PaperGrammage $g) => [
                     'id' => $g->id,
                     'gsm' => $g->gsm,
                     'pricesCount' => $g->prices_count,
@@ -71,15 +73,15 @@ class PaperTypeController extends Controller
                 'category' => $paperType->category,
                 'sheet_width_cm' => $paperType->sheet_width_cm,
                 'sheet_height_cm' => $paperType->sheet_height_cm,
-                'grammages' => $paperType->grammages->map(fn ($g) => [
+                'grammages' => $paperType->grammages->map(fn (PaperGrammage $g) => [
                     'id' => $g->id,
                     'gsm' => $g->gsm,
-                    'prices' => $g->prices->map(fn ($p) => [
+                    'prices' => $g->prices->map(fn (PaperGrammagePrice $p) => [
                         'id' => $p->id,
                         'supplierId' => $p->paper_supplier_id,
                         'supplierName' => $p->supplier->name,
                         'pricePerTonEgp' => (float) $p->price_per_ton_egp,
-                        'priceAsOf' => $p->price_as_of?->toDateString(),
+                        'priceAsOf' => $p->price_as_of->toDateString(),
                     ]),
                 ]),
             ],

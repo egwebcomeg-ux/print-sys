@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\ClosureType;
 use App\Enums\CutFraction;
 use App\Enums\DieCondition;
+use Carbon\CarbonImmutable;
+use Database\Factories\CuttingDieFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +14,22 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A cutting die (اسطمبة). Named CuttingDie because `die` is a reserved word in PHP.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property string $length_cm
+ * @property string $width_cm
+ * @property string $depth_cm
+ * @property ClosureType $closure_type
+ * @property string|null $rack_location
+ * @property int $ups_on_cut_sheet
+ * @property CutFraction $cut_fraction
+ * @property DieCondition $condition
+ * @property int $jobs_run_count
+ * @property int|null $estimated_lifespan_jobs
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'code', 'name', 'length_cm', 'width_cm', 'depth_cm', 'closure_type', 'rack_location',

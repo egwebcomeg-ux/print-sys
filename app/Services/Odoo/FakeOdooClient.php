@@ -43,7 +43,10 @@ class FakeOdooClient implements OdooClientInterface
         };
     }
 
-    /** @param array<int, array<string, mixed>> $store */
+    /**
+     * @param  array<int, array<string, mixed>>  $store
+     * @param  array<string, mixed>  $values
+     */
     private function create(array &$store, int $base, array $values): int
     {
         $id = $base + count($store) + 1;
@@ -52,7 +55,10 @@ class FakeOdooClient implements OdooClientInterface
         return $id;
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * @param  list<array{0: string, 1: string, 2: mixed}>  $domain
+     * @return list<array<string, mixed>>
+     */
     private function searchPartner(array $domain): array
     {
         $name = $domain[0][2] ?? null;
@@ -66,10 +72,18 @@ class FakeOdooClient implements OdooClientInterface
         return [];
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * @param  list<array{0: string, 1: string, 2: mixed}>  $domain
+     * @return list<array<string, mixed>>
+     */
     private function searchMove(array $domain): array
     {
-        $ref = collect($domain)->firstWhere(0, 'ref')[2] ?? null;
+        $ref = null;
+        foreach ($domain as $condition) {
+            if ($condition[0] === 'ref') {
+                $ref = $condition[2];
+            }
+        }
 
         foreach ($this->moves as $id => $move) {
             if (($move['ref'] ?? null) === $ref) {

@@ -15,6 +15,9 @@ return [
     |
     */
 
+    // Path to mysqldump for backup:database (when it's not on PATH).
+    'mysqldump_path' => env('MYSQLDUMP_PATH', 'mysqldump'),
+
     'default_stages' => [
         'default' => ['طباعة', 'سلوفان', 'تكسير', 'لصق وتطبيق', 'مراجعة جودة', 'جاهز للتسليم'],
         'lid_and_base' => ['طباعة', 'سلوفان', 'تكسير', 'تجميع القاع والغطاء', 'مراجعة جودة', 'جاهز للتسليم'],

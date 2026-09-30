@@ -53,8 +53,8 @@ class JobDetailResource extends JsonResource
                 ->map(fn (ActivityLog $a) => [
                     'id' => $a->id,
                     'description' => $a->description,
-                    'user' => $a->user?->name ?? 'السيستم',
-                    'at' => $a->created_at?->toIso8601String(),
+                    'user' => $a->user->name ?? 'السيستم',
+                    'at' => $a->created_at->toIso8601String(),
                 ]),
             'createdAt' => $this->created_at?->toIso8601String(),
 
@@ -116,7 +116,7 @@ class JobDetailResource extends JsonResource
                     'id' => $a->id,
                     'press' => $a->press->name,
                     'by' => $a->assignedBy?->name,
-                    'at' => $a->assigned_at?->toIso8601String(),
+                    'at' => $a->assigned_at->toIso8601String(),
                 ]),
             ],
 

@@ -3,12 +3,28 @@
 namespace App\Models;
 
 use App\Enums\LeadStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\LeadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int|null $customer_id
+ * @property string $contact_name
+ * @property string|null $company_name
+ * @property string|null $phone
+ * @property string|null $source
+ * @property LeadStatus $status
+ * @property int|null $expected_quantity
+ * @property string|null $notes
+ * @property int|null $owner_user_id
+ * @property int|null $converted_job_id
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ */
 #[Fillable([
     'customer_id', 'contact_name', 'company_name', 'phone', 'source', 'status',
     'expected_quantity', 'notes', 'owner_user_id', 'converted_job_id',

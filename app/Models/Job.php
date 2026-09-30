@@ -8,6 +8,7 @@ use App\Enums\JobStatus;
 use App\Enums\JobType;
 use App\Enums\Lamination;
 use App\Enums\OdooSyncStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\JobFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,34 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * A print job (شغلانة) — not a queue job. Either a die-cut box
  * (QuickBoxPricingCalculator) or a manual paper job (ManualJobCostingCalculator).
+ *
+ * @property int $id
+ * @property int $customer_id
+ * @property JobType $job_type
+ * @property string|null $title
+ * @property BoxType|null $box_type
+ * @property BoxShape|null $box_shape
+ * @property string|null $length_cm
+ * @property string|null $width_cm
+ * @property string|null $depth_cm
+ * @property int|null $quantity
+ * @property int|null $paper_grammage_id
+ * @property int|null $paper_grammage_price_id
+ * @property int $print_colors
+ * @property Lamination $lamination
+ * @property bool $is_using_existing_die
+ * @property int|null $die_id
+ * @property int|null $raw_sheets_needed
+ * @property int|null $ups_per_raw_sheet
+ * @property bool $interlocked
+ * @property string $base_cost_egp
+ * @property string $margin_percent
+ * @property string $final_price_egp
+ * @property array<array-key, mixed>|null $quote_snapshot
+ * @property int|null $produced_quantity
+ * @property JobStatus $status
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Fillable([
     'customer_id', 'job_type', 'title', 'box_type', 'box_shape', 'length_cm', 'width_cm', 'depth_cm',
