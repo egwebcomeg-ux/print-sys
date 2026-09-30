@@ -105,6 +105,7 @@ vendor/bin/pint --test
     * * * * * cd ~/app && php artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
     ```
 5. **نسخة احتياطية يومية** الساعة 2 الصبح (`php artisan backup:database`) في `storage/app/backups` وبتحتفظ بآخر 14. لو `mysqldump` مش في الـ PATH حط `MYSQLDUMP_PATH` في `.env`. انسخ النسخ دي برّه السيرفر كمان.
+   5.5. **ملفات التصميم** بتتخزن في `storage/app/private/job-files` (مش متاحة للعامة، التحميل من خلال السيستم بس). ارفع `upload_max_filesize` و`post_max_size` لـ 64M على الأقل من MultiPHP INI Editor، وضيفها للنسخ الاحتياطي.
 6. بعد كل نشر: `composer install --no-dev -o` ثم `php artisan migrate --force` ثم `php artisan optimize`.
 7. المتطلبات: PHP ≥ 8.4 مع `intl`, `pdo_mysql`, `mbstring`, `fileinfo`, `zip`, `bcmath` · MariaDB ≥ 10.6.
 

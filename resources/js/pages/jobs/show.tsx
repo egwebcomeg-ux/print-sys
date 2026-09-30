@@ -25,6 +25,8 @@ import JobStatusController from '@/actions/App/Http/Controllers/Jobs/JobStatusCo
 import OdooInvoiceSyncController from '@/actions/App/Http/Controllers/Jobs/OdooInvoiceSyncController';
 import { DataTable, EmptyRow, Td, Th } from '@/components/crud/data-table';
 import { PageBody, PageHeader } from '@/components/crud/page-header';
+import { JobFiles } from '@/components/jobs/job-files';
+import type { JobFileItem } from '@/components/jobs/job-files';
 import { JobStatusBadge } from '@/components/jobs/status-badge';
 import { PaymentForm } from '@/components/payments/payment-form';
 import PressRoutingSelector from '@/components/routing/PressRoutingSelector';
@@ -68,6 +70,7 @@ type JobDetail = {
         user: string;
         at: string | null;
     }[];
+    files: JobFileItem[];
     payments: {
         items: {
             id: number;
@@ -316,6 +319,8 @@ export default function JobShow({
                     )}
                 </section>
             )}
+
+            <JobFiles jobId={job.id} files={job.files} />
 
             {job.activity.length > 0 && (
                 <section className="mt-6">

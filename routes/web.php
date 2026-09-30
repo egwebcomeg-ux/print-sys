@@ -16,6 +16,7 @@ use App\Http\Controllers\Jobs\BoxJobController;
 use App\Http\Controllers\Jobs\JobCompletionController;
 use App\Http\Controllers\Jobs\JobController;
 use App\Http\Controllers\Jobs\JobEditController;
+use App\Http\Controllers\Jobs\JobFileController;
 use App\Http\Controllers\Jobs\JobPressAssignmentController;
 use App\Http\Controllers\Jobs\JobQuoteController;
 use App\Http\Controllers\Jobs\JobStageController;
@@ -58,6 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('jobs/{job}/quote', [JobQuoteController::class, 'show'])->name('jobs.quote');
     Route::get('jobs/{job}/work-order', [WorkOrderController::class, 'show'])->name('jobs.work-order');
     Route::get('jobs/{job}/scan', [WorkOrderController::class, 'scan'])->name('jobs.scan');
+    // Design file archive: everyone on the team can view/upload; delete = uploader or admin.
+    Route::post('jobs/{job}/files', [JobFileController::class, 'store'])->name('jobs.files.store');
+    Route::get('jobs/{job}/files/{file}', [JobFileController::class, 'download'])->name('jobs.files.download');
+    Route::delete('jobs/{job}/files/{file}', [JobFileController::class, 'destroy'])->name('jobs.files.destroy');
     // Per-transition role checks live in JobLifecycleService.
     Route::patch('jobs/{job}/status', [JobStatusController::class, 'update'])->name('jobs.status.update');
 

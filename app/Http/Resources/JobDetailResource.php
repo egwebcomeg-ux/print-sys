@@ -9,6 +9,7 @@ use App\Http\Controllers\Jobs\JobEditController;
 use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Models\JobCostLine;
+use App\Models\JobFile;
 use App\Models\JobPaperItem;
 use App\Models\JobPressAssignment;
 use App\Models\JobStage;
@@ -61,6 +62,16 @@ class JobDetailResource extends JsonResource
                 'total' => (float) $this->payments()->sum('amount_egp'),
                 'methods' => PaymentMethod::options(),
             ],
+            'files' => $this->files()->with('user:id,name')->get()->map(fn (JobFile $f) => [
+                'id' => $f->id,
+                'name' => $f->original_name,
+                'size' => $f->size,
+                'version' => $f->version,
+                'note' => $f->note,
+                'by' => $f->user?->name,
+                'at' => $f->created_at?->toIso8601String(),
+                'canDelete' => $request->user()?->isAdmin() || $f->user_id === $request->user()?->id,
+            ]),
             'activity' => ActivityLog::query()->with('user:id,name')
                 ->where('subject_type', 'job')->where('subject_id', $this->id)
                 ->latest('id')->limit(30)->get()
