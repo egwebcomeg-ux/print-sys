@@ -143,3 +143,38 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* DataTable on phones: one card per row, each cell labelled by its column header. */
+@media (max-width: 767px) {
+    .responsive-table thead {
+        display: none;
+    }
+
+    .responsive-table tr {
+        display: block;
+        border-bottom: 1px solid var(--border);
+        padding: 0.5rem 0;
+    }
+
+    .responsive-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 0;
+        padding: 0.3rem 1rem;
+        text-align: start;
+    }
+
+    .responsive-table td[data-label]::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+    }
+
+    /* Action cells (no header) sit at the end of the card. */
+    .responsive-table td:not([data-label]):not([colspan]) {
+        justify-content: flex-end;
+    }
+}

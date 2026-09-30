@@ -1,11 +1,44 @@
+import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode, TdHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Minimal styled table — enough for the catalogue and job lists. */
+/**
+ * Minimal styled table. Below md it turns into stacked cards (see
+ * .responsive-table in app.css); each cell is labelled with its column
+ * header automatically, so pages don't have to repeat the labels.
+ */
 export function DataTable({ children }: { children: ReactNode }) {
+    const ref = useRef<HTMLTableElement>(null);
+
+    // Re-label after every render (rows change with filters/pagination).
+    useLayoutEffect(() => {
+        const table = ref.current;
+        if (!table) {
+            return;
+        }
+        const headers = Array.from(table.querySelectorAll('thead th')).map(
+            (th) => th.textContent?.trim() ?? '',
+        );
+        table.querySelectorAll('tbody tr, tfoot tr').forEach((row) => {
+            Array.from(row.children).forEach((cell, i) => {
+                const label = headers[i];
+                if (label && (cell as HTMLTableCellElement).colSpan === 1) {
+                    cell.setAttribute('data-label', label);
+                } else {
+                    cell.removeAttribute('data-label');
+                }
+            });
+        });
+    });
+
     return (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full text-right text-sm">{children}</table>
+            <table
+                ref={ref}
+                className="responsive-table w-full text-right text-sm"
+            >
+                {children}
+            </table>
         </div>
     );
 }

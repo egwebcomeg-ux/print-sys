@@ -212,7 +212,8 @@ export default function Reports({
                                         dir="ltr"
                                         className={cn(
                                             'text-right',
-                                            Math.abs(w.worst) > 5 && 'text-red-400',
+                                            Math.abs(w.worst) > 5 &&
+                                                'text-red-400',
                                         )}
                                     >
                                         {w.worst}%
